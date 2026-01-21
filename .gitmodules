@@ -1,0 +1,3 @@
+[submodule "upstream-src"]
+	path = upstream-src
+	url = https://github.com/equinor/videx-wellog.git
