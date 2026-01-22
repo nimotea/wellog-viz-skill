@@ -529,3 +529,41 @@ export function safeZoomTo(viewer: LogViewer, range: [number, number]): void {
   viewer.zoomTo(range);
 }
 ```
+
+## StackedTrack Helper (Auto-Promise)
+
+A factory to create `StackedTrack` instances that automatically wraps the data array in a Promise, preventing the common "data is not a function" error.
+
+### Usage
+
+```typescript
+import { StackedTrack } from '@equinor/videx-wellog';
+
+/**
+ * Creates a StackedTrack where data can be a static array OR a promise.
+ */
+export function createStackedTrack(
+  id: string,
+  options: any
+): StackedTrack {
+  const { data, ...rest } = options;
+
+  // Auto-wrap array in a Promise-returning function
+  const safeData = Array.isArray(data) 
+    ? () => Promise.resolve(data) 
+    : data;
+
+  return new StackedTrack(id, {
+    ...rest,
+    data: safeData
+  });
+}
+
+// Example:
+// const track = createStackedTrack('formation', {
+//   data: [ // Just pass the array!
+//     { from: 0, to: 100, color: 'red', name: 'A' }
+//   ],
+//   showLabels: true
+// });
+```

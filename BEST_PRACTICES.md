@@ -33,7 +33,9 @@ This document contains Standard Operating Procedures (SOPs), common pitfalls, an
     - **Correct**: `viewer.zoomTo([3800, 4200])`
     - **Incorrect**: `viewer.zoomTo(3800, 4200)` (Throws "domain is not iterable").
 - **StackedTrack Data**:
-    - **Promise Required**: The `data` property MUST be a function that returns a Promise resolving to the data array. Passing the array directly will cause "options.data(...).then is not a function" errors.
+    - **Promise Required (CRITICAL)**: The `data` property **MUST** be a function that returns a Promise resolving to the data array.
+        - **Incorrect**: `data: myDataArray` (Throws `TypeError: options.data is not a function`).
+        - **Correct**: `data: () => Promise.resolve(myDataArray)`
     - **Data Format**: Expects a sequence of **boundary points**, not intervals. `[{ depth: 100, color: 'red' }, { depth: 200, color: 'blue' }]`.
 - **ScaleHandler Domain Reset**: When providing a custom `ScaleHandler`, `LogViewer`'s constructor will overwrite the handler's domain with its own `domain` option (default `[0, 1000]`).
     - **Fix**: Explicitly pass the `domain` in `LogViewer` options to match your handler, or re-apply it after creation.
