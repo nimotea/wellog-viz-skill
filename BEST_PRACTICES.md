@@ -19,6 +19,22 @@ This document contains Standard Operating Procedures (SOPs), common pitfalls, an
 - **Invalid Plot Configuration**: Inside `GraphTrack`, the `plots` array MUST contain **configuration objects**, not class instances.
     - **Correct**: `plots: [{ type: 'line', options: { ... } }]`
     - **Incorrect**: `plots: [new LinePlot(...)]` (This will cause "undefined-plot" or similar errors).
+- **Track Data vs Plot Data (CRITICAL)**:
+    - **Requirement**: `GraphTrack` **MUST** have a top-level `data` property, even if it is an empty array (though actual data is preferred).
+    - **The Bug**: If you omit `data` at the track level and only provide `data` inside `plots[].options`, the viewer may render initially but will **CRASH** during rescale/zoom operations (Error: `undefined is not iterable`).
+    - **Best Practice**: Always define the data source at the Track level and use `dataAccessor` in Plots to select specific curves.
+    ```typescript
+    // ❌ CRASH PRONE
+    new GraphTrack('bad', {
+      plots: [{ type: 'line', options: { data: [[0, 10]] } }] 
+    });
+
+    // ✅ ROBUST
+    new GraphTrack('good', {
+      data: { curve: [[0, 10]] }, // Top-level data
+      plots: [{ type: 'line', options: { dataAccessor: d => d.curve } }]
+    });
+    ```
 - **Data Accessor**:
     - If your track `data` is a simple array of `[depth, value]` pairs, you do **not** need a `dataAccessor`.
     - If your track `data` is an object containing multiple datasets (e.g., `{ curveA: [...], curveB: [...] }`), you **must** provide a `dataAccessor` in the plot options (e.g., `dataAccessor: d => d.curveA`).
