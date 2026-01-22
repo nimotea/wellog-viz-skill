@@ -68,6 +68,17 @@ def package_skill(skill_path, output_dir=None):
         with zipfile.ZipFile(skill_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
             # Walk through the skill directory
             for file_path in skill_path.rglob('*'):
+                # Check if file should be ignored
+                if "rules" in file_path.parts or ".git" in file_path.parts or "__pycache__" in file_path.parts:
+                    continue
+
+                if "skill-creator" in file_path.parts:
+                    continue
+
+                # Exclude the entire upstream-src directory as users will have the library installed
+                if "upstream-src" in file_path.parts:
+                    continue
+
                 if file_path.is_file():
                     # Calculate the relative path within the zip
                     arcname = file_path.relative_to(skill_path.parent)
