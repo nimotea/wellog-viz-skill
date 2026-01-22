@@ -676,6 +676,21 @@ controller.init(domElement).setTracks(tracks);
     - `distributionLegendConfig`: Auto-generates keys based on `components`.
     - `LegendHelper.basicVerticalLabel(label, abbr)`: Simple vertical text.
 
+**Custom Legend Configuration**:
+If the built-in helpers don't suffice, you can implement the `LegendConfig` interface directly.
+```typescript
+interface LegendConfig {
+  // 'svg' (default) or 'html'
+  elementType: string; 
+  // Function returning the number of rows this legend needs
+  getLegendRows(track: Track): number;
+  // Called once when the legend is created
+  onInit: (elm: Element, track: Track, updateTrigger: () => void) => void;
+  // Called whenever the track updates or resizes
+  onUpdate: (elm: Element, bounds: LegendBounds, track: Track) => void;
+}
+```
+
 **Code Snippet**:
 ```typescript
 import { LegendHelper, scaleLegendConfig, graphLegendConfig } from '@equinor/videx-wellog';
@@ -769,12 +784,19 @@ controller.init(div)
 ```typescript
 import { LogViewer, ScaleTrack, GraphTrack, graphLegendConfig } from '@equinor/videx-wellog';
 
+// 0. Prepare Data
+// const data = [
+//   { DEPTH: 100, GR: 45, NPHI: 0.15, RHOB_POR: 0.2, RES_DEEP: 10, ... },
+//   ...
+// ];
+
 // 1. Lithology Track (GR/CALI)
 const lithoTrack = new GraphTrack('lithology', {
   label: 'Lithology',
   width: 2,
   scale: 'linear',
   domain: [0, 150], // GR usually 0-150 API
+  data: data, // <--- Inject data here
   legendConfig: graphLegendConfig,
   plots: [
     {
@@ -809,6 +831,7 @@ const resTrack = new GraphTrack('resistivity', {
   width: 3,
   scale: 'log', // <--- Key for resistivity
   domain: [0.2, 2000],
+  data: data, // <--- Inject data here
   legendConfig: graphLegendConfig,
   plots: [
     {
@@ -835,6 +858,7 @@ const poroTrack = new GraphTrack('porosity', {
   width: 2,
   scale: 'linear',
   domain: [45, -15], // Inverted scale for porosity
+  data: data, // <--- Inject data here
   legendConfig: graphLegendConfig,
   plots: [
     {

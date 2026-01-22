@@ -22,7 +22,8 @@ The library revolves around a few key components, augmented by our **Skill Utili
 
 Instead of manually handling DOM and Events, use the **High-Level Abstractions** to speed up development:
 
-1.  **Init**: Use `initLogViewer` or `mountLogViewer` to handle DOM readiness and React StrictMode safety.
+1.  **Init**: Use `initLogViewer` or `mountLogViewer` to handle DOM readiness.
+    - **React Users**: Use the `useLogViewer` Hook to handle StrictMode and cleanup automatically.
 2.  **Config**: Use `createSimpleTrack` to define tracks with auto-generated legends.
 3.  **Interact**: Use `ReadoutPlugin` to add mouse-following tooltips without manual DOM coding.
 
@@ -31,6 +32,7 @@ Instead of manually handling DOM and Events, use the **High-Level Abstractions**
 If you need full control:
 
 1.  **Import Styles**: `import '@equinor/videx-wellog/dist/styles/styles.css';`
+    > ⚠️ **Caution**: The style path contains TWO `styles` directories (`dist/styles/styles.css`). Please copy the full path directly to avoid build errors.
 2.  **Instantiate**: `new LogViewer(options)`.
 3.  **Lifecycle**: Ensure `init(div)` is called inside `requestAnimationFrame`.
 
@@ -52,5 +54,5 @@ If you need full control:
 -   **Advanced Configs**: [ADVANCED_EXAMPLES.md](references/advanced-examples.md) - Complex layouts (Triple Combo, Horizontal).
 
 ### 🛠️ Production Utilities
--   **High-Level Abstractions**: [HIGH_LEVEL_ABSTRACTIONS.md](references/high-level-abstractions.md) - **Recommended**. Helper functions for Readouts, Auto-Legends, and Async Init.
--   **Best Practices**: [BEST_PRACTICES.md](references/best-practices.md) - SOPs, Troubleshooting, and **React Integration**.
+-   **High-Level Abstractions**: [HIGH_LEVEL_ABSTRACTIONS.md](references/high-level-abstractions.md) - **Toolbox & Implementations**. Ready-to-use helpers for Readouts, Auto-Legends, and Async Init. Use these to speed up development.
+-   **Best Practices**: [BEST_PRACTICES.md](BEST_PRACTICES.md) - **Guidelines & SOPs**. Critical "Must-Reads" for avoiding pitfalls, React integration, and configuration rules.

@@ -26,6 +26,9 @@ This document contains Standard Operating Procedures (SOPs), common pitfalls, an
         - **Incorrect**: `options: { ... }` (Causes `datapoints.filter is not a function`).
         - **Correct**: `options: { dataAccessor: d => d.map(r => [r.depth, r.gr]) }` (Expensive!)
         - **Better**: Transform data to columnar format first (see [Data Preparation](#data-preparation-sop)).
+    - **Wide Table Array Warning**: Do NOT use "Wide Tables" (arrays where each row is `[depth, val1, val2, ...]`) directly with `dataAccessor`. The `LinePlot` component may fail to process these correctly, leading to crashes or blank screens.
+        - **Risk**: Passing `[[depth, v1, v2], ...]` and using `dataAccessor: d => d.map(r => [r[0], r[1]])` is fragile.
+        - **Solution**: Always split wide tables into independent `[depth, value]` arrays BEFORE passing them to the track. See `splitWideData` in High-Level Abstractions.
 - **Zooming**: The `viewer.zoomTo()` method expects a **single array argument** `[min, max]`.
     - **Correct**: `viewer.zoomTo([3800, 4200])`
     - **Incorrect**: `viewer.zoomTo(3800, 4200)` (Throws "domain is not iterable").
@@ -264,8 +267,10 @@ export const WellLogComponent = () => {
 
 **The Problem**: `LogViewer` defaults to a domain of `[0, 1000]`. If you visualize data at greater depths (e.g., 3000m - 4000m) without setting the `domain`, interactions will fail. The initial `zoomTo` might show data, but the first mouse scroll will likely snap the view back to the wrong range or corrupt the coordinate system.
 
-**Solution 1: Explicit Configuration**
-Always set the `domain` in the constructor to encompass your entire well depth.
+**Solution 1: Explicit Configuration (CRITICAL)**
+Always set the `domain` in the constructor to encompass your entire well depth. 
+
+> ⚠️ **WARNING**: If you `zoomTo` a range (e.g., `[4000, 4100]`) that is outside the configured `domain` (default `[0, 1000]`), the viewer may render initially, but **any interaction** (scroll/pan) will cause the view to snap back or "fly away" to the default domain. You **MUST** set the domain to cover the full data range.
 
 ```typescript
 const viewer = new LogViewer({

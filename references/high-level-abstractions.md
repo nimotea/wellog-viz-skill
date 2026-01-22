@@ -12,13 +12,14 @@ A high-level controller that automatically subscribes to mouse events and update
 
 ```typescript
 import { LogViewer, Track } from '@equinor/videx-wellog';
+import { getTrackValueAt } from './my-utils'; // See Track Value Accessor below
 
 // 1. Define the Plugin Class (Copy this into your project utilities)
 export class ReadoutPlugin {
   private viewer: LogViewer;
   private target: HTMLElement | null;
   private tracks: Track[];
-  private template: (depth: number, values: Record<string, number>) => string;
+  private template: (depth: number, values: Record<string, any>) => string;
   private overlayId: string;
 
   constructor(
@@ -26,7 +27,7 @@ export class ReadoutPlugin {
     options: {
       target: string | HTMLElement;
       tracks?: Track[];
-      template?: (depth: number, values: Record<string, number>) => string;
+      template?: (depth: number, values: Record<string, any>) => string;
     }
   ) {
     this.viewer = viewer;
@@ -38,7 +39,7 @@ export class ReadoutPlugin {
     // Default template if none provided
     this.template = options.template || ((depth, values) => {
       const rows = Object.entries(values)
-        .map(([key, val]) => `<div><b>${key}:</b> ${val.toFixed(2)}</div>`)
+        .map(([key, val]) => `<div><b>${key}:</b> ${typeof val === 'number' ? val.toFixed(2) : val}</div>`)
         .join('');
       return `<div><strong>Depth: ${depth.toFixed(2)}</strong></div>${rows}`;
     });
@@ -61,14 +62,10 @@ export class ReadoutPlugin {
         const depth = isHorizontal ? scale.invert(x) : scale.invert(y);
 
         // Collect values from tracks
-        const values: Record<string, number> = {};
+        const values: Record<string, any> = {};
         
         this.tracks.forEach(track => {
-          // Heuristic: Check if track has a data lookup method or expose raw data
-          // Note: This requires tracks to have accessible data. 
-          // For GraphTrack, we might need to search the data array.
-          // This is a simplified example assuming a findValueAt helper exists or data is accessible.
-          const val = this.findValueAt(track, depth);
+          const val = getTrackValueAt(track, depth);
           if (val !== null && val !== undefined) {
              values[track.id] = val;
           }
@@ -81,24 +78,6 @@ export class ReadoutPlugin {
         if (this.target) this.target.style.display = 'none';
       }
     });
-  }
-
-  // Helper to find value in a track (Naive implementation for GraphTrack)
-  private findValueAt(track: any, depth: number): number | null {
-    if (!track.data) return null;
-    
-    // Handle GraphTrack (Array of [depth, value])
-    if (Array.isArray(track.data)) {
-      // Simple binary search or find (Optimized version needed for production)
-      // This assumes sorted data
-      const item = track.data.find((d: any) => Math.abs(d[0] - depth) < 0.5);
-      return item ? item[1] : null;
-    }
-    
-    // Handle Columnar Data (Object of arrays)
-    // Needs specific knowledge of which curve to pick. 
-    // This example assumes 'data' is the array for simplicity.
-    return null;
   }
 }
 
@@ -304,4 +283,249 @@ const track = new GraphTrack('track', {
     }
   ]
 });
+```
+
+## Track Value Accessor
+
+A robust utility to retrieve the data value at a specific depth for various track types (`GraphTrack`, `StackedTrack`, `DistributionTrack`). This normalizes the differences in data structures.
+
+### Usage
+
+```typescript
+import { Track } from '@equinor/videx-wellog';
+
+/**
+ * Retrieves the value/label at a specific depth for a given track.
+ * Supports:
+ * - GraphTrack: Interpolated or nearest value from array data.
+ * - StackedTrack: Label or Name of the interval.
+ * - DistributionTrack: Composition object at depth.
+ * 
+ * @param track The track instance.
+ * @param depth The depth to query.
+ * @param threshold The maximum depth distance to consider a match (for point data).
+ */
+export function getTrackValueAt(track: any, depth: number, threshold: number = 0.5): any {
+  if (!track || !track.data) return null;
+  const data = track.data;
+
+  // 1. Handle StackedTrack (Intervals: { from, to, label/name })
+  if (track.type === 'stacked' || (Array.isArray(data) && data[0] && 'from' in data[0])) {
+    const interval = data.find((d: any) => depth >= d.from && depth <= d.to);
+    return interval ? (interval.label || interval.name) : null;
+  }
+
+  // 2. Handle DistributionTrack (Points: { depth, composition })
+  if (track.type === 'distribution' || (Array.isArray(data) && data[0] && 'composition' in data[0])) {
+    // Find nearest
+    const item = data.find((d: any) => Math.abs(d.depth - depth) < threshold);
+    return item ? item.composition : null;
+  }
+
+  // 3. Handle GraphTrack (Array of [depth, value])
+  // Note: This assumes standard array format. Custom dataAccessors might require custom logic.
+  if (Array.isArray(data)) {
+    // Check for standard [depth, value] pair
+    if (Array.isArray(data[0]) && data[0].length === 2) {
+       const item = data.find((d: any) => Math.abs(d[0] - depth) < threshold);
+       return item ? item[1] : null;
+    }
+    // Check for object { depth, value }
+    if (data[0] && 'depth' in data[0]) {
+       const item = data.find((d: any) => Math.abs(d.depth - depth) < threshold);
+       // Return the first non-depth value found
+       if (item) {
+         const keys = Object.keys(item).filter(k => k !== 'depth');
+         return keys.length === 1 ? item[keys[0]] : item;
+       }
+    }
+  }
+
+  return null;
+}
+```
+
+## Wide Data Splitter
+
+A utility to split a "Wide Table" array (single array with multiple columns) into multiple independent `[depth, value]` arrays. This is crucial for avoiding crashes in `GraphTrack`.
+
+### Usage
+
+```typescript
+/**
+ * Splits a wide table array into a columnar object of [depth, value] arrays.
+ * 
+ * Input:  [[100, 10, 20], [101, 11, 21]] (Assumes [depth, curve1, curve2])
+ * Output: { curve1: [[100, 10], [101, 11]], curve2: [[100, 20], [101, 21]] }
+ * 
+ * @param data The wide array of arrays.
+ * @param keys An array of keys corresponding to the columns (skipping depth).
+ *             e.g. ['deep', 'shallow'] for columns 1 and 2.
+ * @param depthIndex The index of the depth column (default: 0).
+ */
+export function splitWideData(
+  data: number[][], 
+  keys: string[], 
+  depthIndex: number = 0
+): Record<string, [number, number][]> {
+  const result: Record<string, [number, number][]> = {};
+  keys.forEach(k => result[k] = []);
+
+  data.forEach(row => {
+    const depth = row[depthIndex];
+    let colIndex = 0;
+    
+    // Iterate through the row, skipping depth index
+    row.forEach((val, idx) => {
+      if (idx === depthIndex) return;
+      
+      const key = keys[colIndex];
+      if (key) {
+        result[key].push([depth, val]);
+      }
+      colIndex++;
+    });
+  });
+
+  return result;
+}
+
+// Example:
+// const wideData = [
+//   [1000, 10, 50], 
+//   [1001, 12, 55]
+// ];
+// const columns = splitWideData(wideData, ['res_deep', 'res_shallow']);
+//
+// const track = new GraphTrack('res', {
+//   plots: [
+//     { 
+//       id: 'deep', 
+//       type: 'line', 
+//       options: { data: columns.res_deep } // Safe!
+//     },
+//     { 
+//       id: 'shallow', 
+//       type: 'line', 
+//       options: { data: columns.res_shallow } // Safe!
+//     }
+//   ]
+// });
+```
+
+## React Hook (useLogViewer)
+
+A custom Hook that encapsulates the complex initialization logic required for React, including `requestAnimationFrame` handling, StrictMode double-invocation protection, and cleanup.
+
+### Usage
+
+```typescript
+import { useEffect, useRef, useState } from 'react';
+import { LogViewer } from '@equinor/videx-wellog';
+
+/**
+ * A React Hook to safely initialize and manage a LogViewer instance.
+ * 
+ * @param containerRef Ref to the container DOM element.
+ * @param options LogViewer constructor options.
+ * @returns The initialized LogViewer instance, or null if not yet ready.
+ */
+export function useLogViewer(
+  containerRef: React.RefObject<HTMLElement>,
+  options: any = {}
+): LogViewer | null {
+  const viewerRef = useRef<LogViewer | null>(null);
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    // Guard: Prevent double-init in StrictMode
+    if (viewerRef.current) return;
+
+    // 1. Instantiate
+    const viewer = new LogViewer(options);
+    viewerRef.current = viewer;
+
+    let rafId: number;
+    let mounted = true;
+
+    // 2. Async Init
+    rafId = requestAnimationFrame(() => {
+      if (!mounted || !containerRef.current) return;
+
+      try {
+        // Height check warning
+        if (containerRef.current.clientHeight === 0) {
+          console.warn('LogViewer initialized on zero-height element. It may be invisible.');
+        }
+
+        viewer.init(containerRef.current);
+        setIsReady(true);
+      } catch (e) {
+        console.error('LogViewer Init Failed:', e);
+      }
+    });
+
+    // 3. Cleanup
+    return () => {
+      mounted = false;
+      cancelAnimationFrame(rafId);
+      
+      // Clear DOM
+      if (containerRef.current) {
+        containerRef.current.innerHTML = '';
+      }
+      viewerRef.current = null;
+      setIsReady(false);
+    };
+  }, [containerRef]); // Re-run only if container ref changes (rare)
+
+  return isReady ? viewerRef.current : null;
+}
+
+// Example Component
+// const MyLog = () => {
+//   const ref = useRef(null);
+//   const viewer = useLogViewer(ref, { showLegend: true });
+//
+//   useEffect(() => {
+//     if (viewer) {
+//       viewer.setTracks([...]); // Safe to use
+//     }
+//   }, [viewer]);
+//
+//   return <div ref={ref} style={{ height: '500px' }} />;
+// };
+```
+
+## Safe Zoom Helper
+
+A wrapper for `zoomTo` that checks if the requested range is within the configured domain, preventing "flying view" issues.
+
+### Usage
+
+```typescript
+import { LogViewer } from '@equinor/videx-wellog';
+
+/**
+ * Safely zooms the viewer to a range, warning if out of bounds.
+ * 
+ * @param viewer The LogViewer instance.
+ * @param range The [min, max] depth range to zoom to.
+ */
+export function safeZoomTo(viewer: LogViewer, range: [number, number]): void {
+  const domain = viewer.options.domain || [0, 1000];
+  const [min, max] = domain;
+  const [zMin, zMax] = range;
+
+  if (zMin < min || zMax > max) {
+    console.warn(
+      `Zoom range [${zMin}, ${zMax}] is outside the configured domain [${min}, ${max}]. ` +
+      `Interaction may be unstable. Update the domain in the LogViewer constructor.`
+    );
+  }
+
+  viewer.zoomTo(range);
+}
 ```
