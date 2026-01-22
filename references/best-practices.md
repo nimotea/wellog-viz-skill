@@ -22,6 +22,10 @@ This document contains Standard Operating Procedures (SOPs), common pitfalls, an
 - **Data Accessor**:
     - If your track `data` is a simple array of `[depth, value]` pairs, you do **not** need a `dataAccessor`.
     - If your track `data` is an object containing multiple datasets (e.g., `{ curveA: [...], curveB: [...] }`), you **must** provide a `dataAccessor` in the plot options (e.g., `dataAccessor: d => d.curveA`).
+    - **Row-Oriented Data Warning**: If your `data` is an array of objects (e.g., `[{ depth: 100, gr: 50 }, ...]`) and you pass it directly to `GraphTrack`, you **MUST** provide a `dataAccessor` for **EVERY** plot to extract the specific value and map it to `[depth, value]`.
+        - **Incorrect**: `options: { ... }` (Causes `datapoints.filter is not a function`).
+        - **Correct**: `options: { dataAccessor: d => d.map(r => [r.depth, r.gr]) }` (Expensive!)
+        - **Better**: Transform data to columnar format first (see [Data Preparation](#data-preparation-sop)).
 - **Zooming**: The `viewer.zoomTo()` method expects a **single array argument** `[min, max]`.
     - **Correct**: `viewer.zoomTo([3800, 4200])`
     - **Incorrect**: `viewer.zoomTo(3800, 4200)` (Throws "domain is not iterable").
@@ -158,6 +162,9 @@ export function initLogViewerSafe(
   requestAnimationFrame(() => {
     try {
       viewer.init(container).setTracks(tracks);
+      // IMPORTANT: All subsequent viewer interactions MUST be inside this callback
+      // viewer.overlay.create(...) 
+      // viewer.zoomTo(...)
     } catch (e) {
       console.error('LogViewer Init Failed:', e);
     }
@@ -166,6 +173,91 @@ export function initLogViewerSafe(
 
 // Usage:
 // initLogViewerSafe(document.getElementById('root'), viewer, [scaleTrack, graphTrack]);
+// ❌ WRONG: viewer.zoomTo(...) // Will fail because init() happens async
+```
+
+## Promise-Based Initialization (Async/Await)
+
+To avoid callback hell and timing issues, use the `initLogViewer` helper from [High-Level Abstractions](high-level-abstractions.md).
+
+```typescript
+import { initLogViewer } from './utils/wellog-helpers';
+
+async function setup() {
+  const viewer = new LogViewer();
+  // ... configure tracks ...
+  
+  // Await the initialization
+  await initLogViewer(viewer, document.getElementById('root'));
+  
+  // Safe to use viewer methods now
+  viewer.setTracks(tracks);
+  viewer.zoomTo([1000, 1200]);
+}
+```
+
+## React Integration Patterns
+
+Using `LogViewer` in React requires careful handling of the `useEffect` lifecycle to prevent memory leaks, race conditions, and "blank screen" issues caused by StrictMode double-invocation.
+
+**Key Rules:**
+1.  **Cancel RAF**: Always store the `requestAnimationFrame` ID and cancel it in the cleanup function.
+2.  **Dispose Viewer**: Although the library doesn't have a formal `dispose` method, you should nullify references and clear HTML content to prevent detached DOM nodes.
+3.  **Ref Stability**: Use `useRef` to hold the viewer instance if you need to access it outside the effect.
+
+```tsx
+import React, { useEffect, useRef } from 'react';
+import { LogViewer, ScaleTrack } from '@equinor/videx-wellog';
+
+export const WellLogComponent = () => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const viewerRef = useRef<LogViewer | null>(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    let rafId: number;
+    let isActive = true; // Guard for cleanup
+
+    // 1. Create Instance
+    const viewer = new LogViewer({ showLegend: true });
+    viewerRef.current = viewer;
+
+    // 2. Async Init via RAF
+    rafId = requestAnimationFrame(() => {
+      if (!isActive || !containerRef.current) return;
+
+      try {
+        // 3. Init & Configure INSIDE the callback
+        viewer.init(containerRef.current);
+        
+        // Define tracks
+        const scaleTrack = new ScaleTrack('scale');
+        viewer.setTracks([scaleTrack]);
+        
+        // Optional: Interactions
+        viewer.zoomTo([0, 100]);
+        
+      } catch (err) {
+        console.error('Viewer Init Error:', err);
+      }
+    });
+
+    // 4. Cleanup Function
+    return () => {
+      isActive = false;
+      cancelAnimationFrame(rafId);
+      
+      // Clear DOM to prevent duplicates in StrictMode
+      if (containerRef.current) {
+        containerRef.current.innerHTML = '';
+      }
+      viewerRef.current = null;
+    };
+  }, []); // Empty dependency array for mount-only logic
+
+  return <div ref={containerRef} style={{ height: '500px', width: '100%' }} />;
+};
 ```
 
 ## Deep Well Data & Domain Configuration

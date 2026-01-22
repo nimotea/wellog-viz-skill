@@ -1,68 +1,56 @@
 ---
 name: wellog-viz
-description: A tool for generating well-log visualizations using the videx-wellog library. Use this skill when you need to create, configure, or understand well-log plots, tracks, and viewers. Trigger this skill when the user asks about: (1) Creating new well-log visualizations, (2) Adding tracks (Graph, Scale, Stacked) or plots (Area, Line, Dip), (3) Configuring LogViewer or LogController, (4) Debugging visualization issues or "blank screen" errors, (5) Mocking well-log data.
+description: "A tool for generating well-log visualizations using the videx-wellog library. Use this skill when you need to create, configure, or understand well-log plots, tracks, and viewers. Trigger this skill when the user asks about: (1) Creating new well-log visualizations, (2) Adding tracks (Graph, Scale, Stacked) or plots (Area, Line, Dip), (3) Configuring LogViewer or LogController, (4) Debugging visualization issues (blank screen, React StrictMode), (5) Using High-Level Abstractions (Readout, Auto-Legend, Async Init)."
 ---
 
 # Well-Log Visualization Skill
 
-This skill provides guidance and code snippets for using the `videx-wellog` library to create well-log visualizations.
+This skill provides guidance, code snippets, and high-level utilities for using the `videx-wellog` library.
 
 ## Core Concepts
 
-The library revolves around a few key components:
-1.  **LogViewer**: The main container that holds tracks.
-2.  **Tracks**: Vertical strips that display data (e.g., `GraphTrack`, `ScaleTrack`, `StackedTrack`).
-3.  **Plots**: Visual representations of data within a track (e.g., `LinePlot`, `AreaPlot`).
-4.  **ScaleHandler**: Manages the depth scale and zooming.
+The library revolves around a few key components, augmented by our **Skill Utilities**:
+
+1.  **LogViewer**: The main container. **Recommendation**: Use `mountLogViewer` (from Abstractions) for safe async initialization.
+2.  **Tracks**: Vertical strips (e.g., `GraphTrack`, `ScaleTrack`). **Recommendation**: Use `createSimpleTrack` for reduced boilerplate.
+3.  **Plots**: Visual representations (e.g., `LinePlot`, `AreaPlot`).
+4.  **ScaleHandler**: Manages depth scale/zooming.
 
 ## Usage Guide
 
-### Basic Setup
+### Recommended Workflow (High-Level)
 
-To create a basic log viewer:
+Instead of manually handling DOM and Events, use the **High-Level Abstractions** to speed up development:
 
-1.  **Import Styles**: You MUST import the CSS styles for the viewer to render correctly.
-    ```typescript
-    import '@equinor/videx-wellog/dist/styles/styles.css';
-    ```
-2.  Instantiate `LogViewer`.
-3.  Create Tracks.
-4.  Add Tracks to the Viewer.
-5.  Initialize the Viewer with a DOM element.
+1.  **Init**: Use `initLogViewer` or `mountLogViewer` to handle DOM readiness and React StrictMode safety.
+2.  **Config**: Use `createSimpleTrack` to define tracks with auto-generated legends.
+3.  **Interact**: Use `ReadoutPlugin` to add mouse-following tooltips without manual DOM coding.
 
-### Best Practices & Troubleshooting
+### Basic Setup (Low-Level)
 
-For detailed SOPs, common pitfalls, and robust initialization patterns, see **[BEST_PRACTICES.md](references/best-practices.md)**. This includes:
--   **Common Pitfalls**: Resize issues, style missing, invalid plot config.
--   **TypeScript Errors**: Fixing missing `legendInfo`.
--   **Robust Initialization**: Preventing blank screens.
--   **Data Preparation**: Transforming row data to columnar format.
+If you need full control:
+
+1.  **Import Styles**: `import '@equinor/videx-wellog/dist/styles/styles.css';`
+2.  **Instantiate**: `new LogViewer(options)`.
+3.  **Lifecycle**: Ensure `init(div)` is called inside `requestAnimationFrame`.
 
 ## Available Components
 
--   **LogViewer**: The primary component for interactive visualization.
-    -   **MUST be used** if you need built-in zooming, panning, or overlay interactions.
-    -   Usage: `new LogViewer(options)`. **Avoid `LogViewer.basic()`**.
--   **LogController**: The base class for rendering tracks without interaction.
-    -   **Use only** for static exports (e.g., PDF generation) or if you are building a completely custom interaction layer.
-    -   **Does NOT support** zoom/pan out of the box.
--   **Tracks**:
-    -   `ScaleTrack`: Displays depth scale.
-    -   `GraphTrack`: Displays line/area graphs.
-    -   `StackedTrack`: Displays stacked data (e.g., lithology).
-    -   `DualScaleTrack`: Scale track with dual units.
--   **Plots**:
-    -   `LinePlot`
-    -   `AreaPlot`
-    -   `DotPlot`
-    -   `DifferentialPlot`
+-   **LogViewer**: Interactive container (Zoom/Pan/Overlay).
+-   **LogController**: Static renderer (No built-in interaction).
+-   **Tracks**: `ScaleTrack`, `GraphTrack`, `StackedTrack`, `DualScaleTrack`.
+-   **Plots**: `LinePlot`, `AreaPlot`, `DotPlot`, `DifferentialPlot`, `DipPlot`.
 
-## Reference Material
+## 📚 Knowledge Base
 
--   **Examples & Snippets**: See [EXAMPLES.md](references/examples.md) for basic usage.
--   **Best Practices**: See [BEST_PRACTICES.md](references/best-practices.md) for SOPs and troubleshooting.
--   **Visual Patterns**: See [VISUAL_PATTERNS.md](references/visual-patterns.md) for mapping visual styles to code configurations.
--   **High-Level Abstractions**: See [HIGH_LEVEL_ABSTRACTIONS.md](references/high-level-abstractions.md) for simplified APIs (ReadoutPlugin, SimpleTrack).
--   **Advanced Configurations**: See [ADVANCED_EXAMPLES.md](references/advanced-examples.md) for complex track setups.
--   **Mock Data**: See [MOCK_DATA.md](references/mock-data.md) for data generation helpers.
--   **API Details**: (Refer to source code in `src/` or generated docs in `docs/` if needed).
+### 🚀 Getting Started
+-   **Basic Examples**: [EXAMPLES.md](references/examples.md) - Standard boilerplate for Viewers and Tracks.
+-   **Mock Data**: [MOCK_DATA.md](references/mock-data.md) - Generators for test datasets.
+
+### 🧩 Patterns & Recipes
+-   **Visual Patterns**: [VISUAL_PATTERNS.md](references/visual-patterns.md) - Map visual requirements (screenshots) to code.
+-   **Advanced Configs**: [ADVANCED_EXAMPLES.md](references/advanced-examples.md) - Complex layouts (Triple Combo, Horizontal).
+
+### 🛠️ Production Utilities
+-   **High-Level Abstractions**: [HIGH_LEVEL_ABSTRACTIONS.md](references/high-level-abstractions.md) - **Recommended**. Helper functions for Readouts, Auto-Legends, and Async Init.
+-   **Best Practices**: [BEST_PRACTICES.md](references/best-practices.md) - SOPs, Troubleshooting, and **React Integration**.

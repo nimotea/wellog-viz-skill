@@ -165,6 +165,72 @@ export function createSimpleTrack(config: SimpleTrackConfig): GraphTrack {
   });
 }
 
+/**
+ * Initializes a LogViewer asynchronously, ensuring the DOM is ready.
+ * Returns a Promise that resolves to the viewer instance.
+ * 
+ * @param viewer The LogViewer instance.
+ * @param container The DOM element to mount into.
+ */
+export function initLogViewer(
+  viewer: LogViewer, 
+  container: HTMLElement | null
+): Promise<LogViewer> {
+  return new Promise((resolve, reject) => {
+    if (!container) {
+      reject(new Error('LogViewer Init Error: Container element is null.'));
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      try {
+        viewer.init(container);
+        resolve(viewer);
+      } catch (e) {
+        reject(e);
+      }
+    });
+  });
+}
+
+// Example
+// await initLogViewer(viewer, div);
+// viewer.overlay.create(...); // Safe now
+
+/**
+ * A generalized mount function that handles RAF and cleanup.
+ * Useful for non-React environments or custom framework integrations.
+ * 
+ * @param container The DOM element.
+ * @param options LogViewer options.
+ * @returns Object containing the viewer instance and a cleanup function.
+ */
+export function mountLogViewer(container: HTMLElement, options: any = {}) {
+  const viewer = new LogViewer(options);
+  let rafId: number;
+
+  const promise = new Promise<LogViewer>((resolve, reject) => {
+    rafId = requestAnimationFrame(() => {
+      try {
+        viewer.init(container);
+        resolve(viewer);
+      } catch (e) {
+        reject(e);
+      }
+    });
+  });
+
+  return {
+    viewer,
+    ready: promise,
+    dispose: () => {
+      cancelAnimationFrame(rafId);
+      // Clean up DOM if needed, though usually handled by framework
+      if (container) container.innerHTML = '';
+    }
+  };
+}
+
 // Example
 const track = createSimpleTrack({
   id: 'gr',
@@ -173,6 +239,36 @@ const track = createSimpleTrack({
   label: 'Gamma Ray',
   unit: 'API'
 });
+
+/**
+ * Helper to create a data accessor for Row-Oriented Data.
+ * Extracts a specific key from an array of objects and maps it to [depth, value].
+ * 
+ * @param key The key in the row object to extract as value.
+ * @param depthKey The key in the row object representing depth (default: 'depth').
+ */
+export function createRowAccessor(key: string, depthKey: string = 'depth') {
+  return (data: any[]) => {
+    if (!Array.isArray(data)) return [];
+    return data
+      .map((row) => {
+        const d = row[depthKey];
+        const v = row[key];
+        return (typeof d === 'number' && typeof v === 'number') ? [d, v] : null;
+      })
+      .filter((p): p is [number, number] => p !== null);
+  };
+}
+
+// Example:
+// const data = [{ depth: 100, gr: 50 }, { depth: 101, gr: 55 }];
+// plots: [{ 
+//   id: 'gr', 
+//   type: 'line', 
+//   options: { 
+//     dataAccessor: createRowAccessor('gr') 
+//   } 
+// }]
 ```
 
 ## Auto-Legend Helper

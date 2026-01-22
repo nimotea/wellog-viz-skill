@@ -71,6 +71,9 @@ def package_skill(skill_path, output_dir=None):
                 # Check if file should be ignored
                 if "rules" in file_path.parts or ".git" in file_path.parts or "__pycache__" in file_path.parts:
                     continue
+                
+                if ".trae" in file_path.parts or file_path.name == "feedback_logs.jsonl":
+                    continue
 
                 if "skill-creator" in file_path.parts:
                     continue
