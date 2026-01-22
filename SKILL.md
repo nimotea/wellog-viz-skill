@@ -62,6 +62,7 @@ For detailed SOPs, common pitfalls, and robust initialization patterns, see **[B
 -   **Examples & Snippets**: See [EXAMPLES.md](references/examples.md) for basic usage.
 -   **Best Practices**: See [BEST_PRACTICES.md](references/best-practices.md) for SOPs and troubleshooting.
 -   **Visual Patterns**: See [VISUAL_PATTERNS.md](references/visual-patterns.md) for mapping visual styles to code configurations.
+-   **High-Level Abstractions**: See [HIGH_LEVEL_ABSTRACTIONS.md](references/high-level-abstractions.md) for simplified APIs (ReadoutPlugin, SimpleTrack).
 -   **Advanced Configurations**: See [ADVANCED_EXAMPLES.md](references/advanced-examples.md) for complex track setups.
 -   **Mock Data**: See [MOCK_DATA.md](references/mock-data.md) for data generation helpers.
 -   **API Details**: (Refer to source code in `src/` or generated docs in `docs/` if needed).
