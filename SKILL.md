@@ -1,19 +1,11 @@
 ---
 name: wellog-viz
-description: A tool for generating well-log visualizations using the videx-wellog library. Use this skill when you need to create, configure, or understand well-log plots, tracks, and viewers.
+description: A tool for generating well-log visualizations using the videx-wellog library. Use this skill when you need to create, configure, or understand well-log plots, tracks, and viewers. Trigger this skill when the user asks about: (1) Creating new well-log visualizations, (2) Adding tracks (Graph, Scale, Stacked) or plots (Area, Line, Dip), (3) Configuring LogViewer or LogController, (4) Debugging visualization issues or "blank screen" errors, (5) Mocking well-log data.
 ---
 
 # Well-Log Visualization Skill
 
 This skill provides guidance and code snippets for using the `videx-wellog` library to create well-log visualizations.
-
-## When to use this skill
-
-Use this skill when:
-- You need to create a new well-log visualization.
-- You want to add specific tracks (Graph, Scale, Stacked, etc.) to a log viewer.
-- You need to configure plot types (Area, Line, Dot, etc.).
-- You are debugging or modifying existing well-log code.
 
 ## Core Concepts
 
@@ -38,34 +30,22 @@ To create a basic log viewer:
 4.  Add Tracks to the Viewer.
 5.  Initialize the Viewer with a DOM element.
 
-### Common Pitfalls
+### Best Practices & Troubleshooting
 
--   **Resize Method**: The `LogViewer` does **not** have a `.resize()` method. Do not attempt to call `viewer.resize()`. The viewer handles resizing automatically or requires re-initialization logic depending on the wrapper.
--   **Style Missing**: If tracks look broken or invisible, ensure `styles.css` is imported.
--   **Strict Property Names**: The library is strict about property names. Using incorrect names (e.g., `lineWidth` instead of `width` for `LinePlot`) will likely be ignored or cause type errors if using TypeScript.
-    -   **LinePlot / AreaPlot / DotPlot**: Use `width` for stroke width.
-    -   **DifferentialPlot**: Use `lineWidth` inside `serie1` / `serie2` options.
-    -   **GraphTrack**: Use `plots` (array), not `plot` (singular).
--   **Invalid Plot Configuration**: Inside `GraphTrack`, the `plots` array MUST contain **configuration objects**, not class instances.
-    -   **Correct**: `plots: [{ type: 'line', options: { ... } }]`
-    -   **Incorrect**: `plots: [new LinePlot(...)]` (This will cause "undefined-plot" or similar errors).
--   **Data Accessor**:
-    -   If your track `data` is a simple array of `[depth, value]` pairs, you do **not** need a `dataAccessor`.
-    -   If your track `data` is an object containing multiple datasets (e.g., `{ curveA: [...], curveB: [...] }`), you **must** provide a `dataAccessor` in the plot options (e.g., `dataAccessor: d => d.curveA`).
--   **Zooming**: The `viewer.zoomTo()` method expects a **single array argument** `[min, max]`.
-    -   **Correct**: `viewer.zoomTo([3800, 4200])`
-    -   **Incorrect**: `viewer.zoomTo(3800, 4200)` (Throws "domain is not iterable").
--   **StackedTrack Data**:
-    -   **Promise Required**: The `data` property MUST be a function that returns a Promise resolving to the data array. Passing the array directly will cause "options.data(...).then is not a function" errors.
-    -   **Data Format**: Expects a sequence of **boundary points**, not intervals. `[{ depth: 100, color: 'red' }, { depth: 200, color: 'blue' }]`.
--   **Initialization**: While the `LogViewer` constructor accepts a container, it is more robust to use `viewer.init(element)` wrapped in `requestAnimationFrame`.
-    -   This ensures the DOM is fully ready before the viewer attempts to measure dimensions.
+For detailed SOPs, common pitfalls, and robust initialization patterns, see **[BEST_PRACTICES.md](references/best-practices.md)**. This includes:
+-   **Common Pitfalls**: Resize issues, style missing, invalid plot config.
+-   **TypeScript Errors**: Fixing missing `legendInfo`.
+-   **Robust Initialization**: Preventing blank screens.
+-   **Data Preparation**: Transforming row data to columnar format.
 
-See [EXAMPLES.md](references/examples.md) for concrete code snippets.
+## Available Components
 
-### Available Components
-
--   **LogViewer**: `LogViewer.basic()` or `new LogViewer(options)`
+-   **LogViewer**: The primary component for interactive visualization.
+    -   **MUST be used** if you need built-in zooming, panning, or overlay interactions.
+    -   Usage: `new LogViewer(options)`. **Avoid `LogViewer.basic()`**.
+-   **LogController**: The base class for rendering tracks without interaction.
+    -   **Use only** for static exports (e.g., PDF generation) or if you are building a completely custom interaction layer.
+    -   **Does NOT support** zoom/pan out of the box.
 -   **Tracks**:
     -   `ScaleTrack`: Displays depth scale.
     -   `GraphTrack`: Displays line/area graphs.
@@ -77,9 +57,11 @@ See [EXAMPLES.md](references/examples.md) for concrete code snippets.
     -   `DotPlot`
     -   `DifferentialPlot`
 
-### Reference Material
+## Reference Material
 
 -   **Examples & Snippets**: See [EXAMPLES.md](references/examples.md) for basic usage.
+-   **Best Practices**: See [BEST_PRACTICES.md](references/best-practices.md) for SOPs and troubleshooting.
+-   **Visual Patterns**: See [VISUAL_PATTERNS.md](references/visual-patterns.md) for mapping visual styles to code configurations.
 -   **Advanced Configurations**: See [ADVANCED_EXAMPLES.md](references/advanced-examples.md) for complex track setups.
 -   **Mock Data**: See [MOCK_DATA.md](references/mock-data.md) for data generation helpers.
 -   **API Details**: (Refer to source code in `src/` or generated docs in `docs/` if needed).
