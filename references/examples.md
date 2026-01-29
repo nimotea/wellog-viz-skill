@@ -10,7 +10,7 @@ import { ScaleTrack, LogViewer } from '@equinor/videx-wellog';
 
 const div = document.createElement('div');
 div.style.width = '100px';
-div.style.height = '500px';
+div.style.height = '500px'; // ⚠️ CRITICAL: Container MUST have an explicit height!
 
 const scaleTrack = new ScaleTrack('scale');
 // AVOID LogViewer.basic(false) as it may return a limited instance.
@@ -20,6 +20,7 @@ const viewer = new LogViewer({ showLegend: false, showTitles: false });
 // Ensure div is attached to DOM before init
 requestAnimationFrame(() => {
   viewer.init(div).addTrack(scaleTrack);
+  viewer.update(); // ⚠️ IMPORTANT: Must call update() to render tracks
 });
 ```
 
@@ -31,7 +32,7 @@ import { ScaleTrack, GraphTrack, LogViewer } from '@equinor/videx-wellog';
 
 const div = document.createElement('div');
 div.style.width = '500px';
-div.style.height = '500px';
+div.style.height = '500px'; // ⚠️ CRITICAL: Container MUST have an explicit height!
 
 const scaleTrack = new ScaleTrack('scale', { maxWidth: 60 });
 const graphTrack1 = new GraphTrack('graph1', { 
@@ -64,7 +65,13 @@ const graphTrack2 = new GraphTrack('graph2', {
       type: 'line',
       options: {
         color: 'blue',
+        // dataAccessor receives the entire `data` object/array from the track.
+        // It MUST return a coordinate array in the format [[depth, value], ...].
+        // ⚠️ IMPORTANT: The order is [Depth, Value], NOT [Value, Depth].
+        // Example for columnar data:
         dataAccessor: d => d.datasetA
+        // Example for row-oriented data (e.g., [{ depth: 100, GR: 50 }]):
+        // dataAccessor: (data) => data.map(row => [row.depth, row.GR])
       }
     }
   ]
@@ -79,6 +86,7 @@ requestAnimationFrame(() => {
     graphTrack1,
     graphTrack2,
   );
+  viewer.update(); // ⚠️ IMPORTANT: Must call update() to render tracks
 });
 ```
 
@@ -86,12 +94,15 @@ requestAnimationFrame(() => {
 
 ```typescript
 import { LogViewer, ScaleTrack, StackedTrack } from '@equinor/videx-wellog';
+import { parseColor } from './my-utils'; // Recommended helper (see Abstractions)
 
 // Mock data example (Boundary points, not intervals)
 // The viewer fills from depth 100 to 200 with red, then from 200 onwards with blue
+// ⚠️ IMPORTANT: StackedTrack REQUIRES color as {r, g, b} objects! 
+// Standard CSS strings like 'red' will result in black if not converted.
 const data = [
-  { depth: 100, color: 'red', label: 'Layer A' },
-  { depth: 200, color: 'blue', label: 'Layer B' }
+  { depth: 100, color: { r: 255, g: 0, b: 0 }, label: 'Layer A' },
+  { depth: 200, color: parseColor('blue'), label: 'Layer B' }
 ];
 
 const div = document.createElement('div');
@@ -107,6 +118,7 @@ const stackedTrack = new StackedTrack('id', {
 
 requestAnimationFrame(() => {
   viewer.init(div).setTracks([scaleTrack, stackedTrack]);
+  viewer.update(); // ⚠️ IMPORTANT: Must call update() to render tracks
 });
 ```
 
@@ -128,6 +140,7 @@ const tracks = createTracks(); // Helper function to create tracks
 
 requestAnimationFrame(() => {
   viewer.init(div).setTracks(tracks);
+  viewer.update(); // ⚠️ IMPORTANT: Must call update() to render tracks
 });
 ```
 
@@ -170,6 +183,7 @@ viewer.scaleHandler = scaleHandler;
 
 requestAnimationFrame(() => {
   viewer.init(div).setTracks(scaleTrack1, scaleTrack2);
+  viewer.update(); // ⚠️ IMPORTANT: Must call update() to render tracks
 });
 ```
 
@@ -350,7 +364,8 @@ const track = new GraphTrack('multi-curve', {
       options: {
         color: 'green',
         width: 2,
-        // Use dataAccessor to extract specific curve
+        // Use dataAccessor to extract specific curve. 
+        // Returns [[depth, value], ...]
         dataAccessor: (d) => d.HAZI, 
         // Note: legendInfo might require type augmentation in TS (see SKILL.md)
         legendInfo: () => ({ label: 'HAZI', unit: 'deg' }),
@@ -375,6 +390,7 @@ const viewer = new LogViewer({ showLegend: true, showTitles: true }).setTracks(s
 
 requestAnimationFrame(() => {
   viewer.init(div);
+  viewer.update(); // ⚠️ IMPORTANT: Must call update() to render tracks
 });
 ```
 
@@ -462,7 +478,7 @@ const poroTrack = new GraphTrack('porosity', {
         serie1: { color: 'blue', fill: 'yellow', width: 1 }, // Neutron
         serie2: { color: 'red', fill: 'grey', width: 1 },    // Density
         // Fill yellow (Gas) when Neutron < Density (in porosity units)
-        // Ensure your dataAccessor returns [NPHI, RHOB_POR]
+        // dataAccessor must return [ [depth, NPHI], [depth, RHOB_POR] ]
         dataAccessor: d => [d.NPHI, d.RHOB_POR] 
       }
     }
@@ -481,6 +497,7 @@ const viewer = new LogViewer({
 
 requestAnimationFrame(() => {
   viewer.init(div).setTracks(lithoTrack, depthTrack, resTrack, poroTrack);
+  viewer.update(); // ⚠️ IMPORTANT: Must call update() to render tracks
 });
 ```
 

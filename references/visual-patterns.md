@@ -14,6 +14,10 @@ This document maps visual requirements (screenshots/mockups) to specific compone
     - [Line Plot (Solid / Dashed)](#line-plot-solid--dashed)
     - [Step Plot](#step-plot)
     - [Tadpole / Dip Plot](#tadpole--dip-plot)
+  - [Geologic Lithology Patterns (Workarounds)](#geologic-lithology-patterns-workarounds)
+    - [Pattern 1: Sandstone (Stippled/Dots)](#pattern-1-sandstone-stippleddots)
+    - [Pattern 2: Shale (Hatched/Horizontal Lines)](#pattern-2-shale-hatchedhorizontal-lines)
+    - [Pattern 3: Limestone (Brick/Blocky)](#pattern-3-limestone-brickblocky)
   - [Track Patterns](#track-patterns)
     - [Standard Graph Track (Grid)](#standard-graph-track-grid)
     - [Graph Track (Piecewise)](#graph-track-piecewise)
@@ -225,6 +229,50 @@ This document maps visual requirements (screenshots/mockups) to specific compone
     legendInfo: () => ({ label: 'DIP', unit: 'deg' }),
   }
 }
+```
+
+## Geologic Lithology Patterns (Workarounds)
+
+`videx-wellog`'s standard `AreaPlot` uses `CanvasRenderingContext2D.fillStyle` with solid colors. Since Canvas patterns (via `createPattern`) are not directly exposed as configuration options, use the following patterns as conceptual guides.
+
+### Pattern 1: Sandstone (Stippled/Dots)
+- **Visual**: Yellow background with black dots.
+- **Code Implementation (Concept)**:
+```typescript
+// 1. Define a CanvasPattern (Conceptual - requires custom Plot or Canvas hook)
+const canvas = document.createElement('canvas');
+const ctx = canvas.getContext('2d');
+canvas.width = 8; canvas.height = 8;
+ctx.fillStyle = '#FFFF00'; // Yellow
+ctx.fillRect(0, 0, 8, 8);
+ctx.fillStyle = '#000000'; // Black dots
+ctx.fillRect(2, 2, 1, 1); ctx.fillRect(6, 6, 1, 1);
+
+// 2. Usage in Plot (Future Enhancement/Custom Plot)
+{
+  type: 'area',
+  options: { fill: ctx.createPattern(canvas, 'repeat') }
+}
+```
+
+### Pattern 2: Shale (Hatched/Horizontal Lines)
+- **Visual**: Grey background with thin horizontal black lines.
+- **Code Implementation (Concept)**:
+```typescript
+ctx.fillStyle = '#BEBEBE'; // Grey
+ctx.fillRect(0, 0, 8, 8);
+ctx.strokeStyle = '#000000';
+ctx.beginPath(); ctx.moveTo(0, 4); ctx.lineTo(8, 4); ctx.stroke();
+```
+
+### Pattern 3: Limestone (Brick/Blocky)
+- **Visual**: Blue background with white "brick" boundaries.
+- **Code Implementation (Concept)**:
+```typescript
+ctx.fillStyle = '#0000FF'; // Blue
+ctx.fillRect(0, 0, 16, 16);
+ctx.strokeStyle = '#FFFFFF';
+ctx.strokeRect(0, 0, 16, 8);
 ```
 
 ## Track Patterns

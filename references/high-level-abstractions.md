@@ -100,12 +100,22 @@ A helper function to create `GraphTrack` instances with less nesting.
 ### Usage
 
 ```typescript
-import { GraphTrack, graphLegendConfig } from '@equinor/videx-wellog';
+import { GraphTrack, graphLegendConfig, StackedTrack } from '@equinor/videx-wellog';
+import { rgb } from 'd3-color';
+
+/**
+ * Parses a CSS color string (Hex, Name, RGB) into an {r, g, b, a} object.
+ * This is REQUIRED for StackedTrack as it does not support string colors.
+ */
+export function parseColor(colorStr: string) {
+  const c = rgb(colorStr);
+  return { r: c.r, g: c.g, b: c.b, a: c.opacity };
+}
 
 interface SimpleTrackConfig {
   id: string;
   data: any[]; // Array or Columnar object
-  plotType?: 'line' | 'area' | 'dot'; // Default 'line'
+  plotType?: 'line' | 'area' | 'dot' | 'stacked'; // Added 'stacked'
   color?: string;
   label?: string;
   unit?: string;
@@ -114,13 +124,27 @@ interface SimpleTrackConfig {
 }
 
 /**
- * Creates a GraphTrack with a single plot using a simplified config.
+ * Creates a GraphTrack or StackedTrack with a simplified config.
  */
-export function createSimpleTrack(config: SimpleTrackConfig): GraphTrack {
+export function createSimpleTrack(config: SimpleTrackConfig): GraphTrack | StackedTrack {
   const { 
     id, data, plotType = 'line', color = 'black', 
     label, unit, domain, scale = 'linear' 
   } = config;
+
+  if (plotType === 'stacked') {
+    return new StackedTrack(id, {
+      label: label || id,
+      data: async () => {
+        const rawData = typeof data === 'function' ? await data() : data;
+        // Ensure colors are parsed for StackedTrack
+        return rawData.map(d => ({
+          ...d,
+          color: typeof d.color === 'string' ? parseColor(d.color) : d.color
+        }));
+      }
+    });
+  }
 
   return new GraphTrack(id, {
     label: label || id,
@@ -131,7 +155,7 @@ export function createSimpleTrack(config: SimpleTrackConfig): GraphTrack {
     plots: [
       {
         id: `${id}-plot`,
-        type: plotType,
+        type: plotType as any,
         options: {
           color,
           // Auto-generate legend info if label/unit provided
@@ -145,7 +169,65 @@ export function createSimpleTrack(config: SimpleTrackConfig): GraphTrack {
 }
 
 /**
+ * Validates if the container element is suitable for LogViewer initialization.
+ * Checks for existence, visibility, and non-zero dimensions.
+ * 
+ * ⚠️ CRITICAL: LogViewer captures size at init(). If initialized at 0px, 
+ * it will NOT self-correct later.
+ * 
+ * @param el The DOM element to check.
+ * @returns true if valid, false otherwise.
+ */
+export function validateContainer(el: HTMLElement | null): boolean {
+  if (!el) {
+    console.error('[wellog-viz] Container element is null or undefined.');
+    return false;
+  }
+
+  const rect = el.getBoundingClientRect();
+  const hasSize = rect.width > 0 && rect.height > 0;
+  const isVisible = window.getComputedStyle(el).display !== 'none';
+
+  if (!hasSize || !isVisible) {
+    console.error(
+      `[wellog-viz] Invalid container dimensions: ${rect.width}x${rect.height}. ` +
+      `Ensure the element is visible and has a defined pixel height/width before calling init().`
+    );
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Enhanced LogViewer initialization that waits for the container to have dimensions.
+ * Use this to prevent the "zero-size init" bug.
+ */
+export async function waitAndInit(viewer: any, container: HTMLElement): Promise<void> {
+  return new Promise((resolve) => {
+    const check = () => {
+      if (validateContainer(container)) {
+        viewer.init(container);
+        resolve();
+        return true;
+      }
+      return false;
+    };
+
+    // Try immediately
+    if (check()) return;
+
+    // Wait for size change if initially 0
+    const observer = new ResizeObserver(() => {
+      if (check()) observer.disconnect();
+    });
+    observer.observe(container);
+  });
+}
+
+/**
  * Initializes a LogViewer asynchronously, ensuring the DOM is ready.
+...
  * Returns a Promise that resolves to the viewer instance.
  * 
  * @param viewer The LogViewer instance.
@@ -222,6 +304,7 @@ const track = createSimpleTrack({
 /**
  * Helper to create a data accessor for Row-Oriented Data.
  * Extracts a specific key from an array of objects and maps it to [depth, value].
+ * ⚠️ IMPORTANT: The order is [Depth, Value], NOT [Value, Depth].
  * 
  * @param key The key in the row object to extract as value.
  * @param depthKey The key in the row object representing depth (default: 'depth').
@@ -248,6 +331,122 @@ export function createRowAccessor(key: string, depthKey: string = 'depth') {
 //     dataAccessor: createRowAccessor('gr') 
 //   } 
 // }]
+
+## Declarative Track Layout (TrackBuilder / LayoutConfig)
+
+For complex well-log layouts with many tracks, manually instantiating each `GraphTrack` or `StackedTrack` can become verbose and error-prone. A declarative approach, where the layout is defined by a simple JSON configuration, can significantly reduce boilerplate and improve maintainability.
+
+This pattern involves:
+1.  **Defining a Layout Configuration**: An array of objects, where each object describes a track (its type, data, plots, etc.).
+2.  **A Factory Function (`createTrackFromConfig`)**: This function takes a single track configuration object and returns the corresponding `Track` instance (`GraphTrack`, `StackedTrack`, `ScaleTrack`, etc.).
+
+### Example Layout Configuration
+
+```typescript
+// layout.ts
+export const complexWellLayout = [
+  {
+    type: 'scale',
+    id: 'depth-scale',
+    options: { maxWidth: 60 },
+  },
+  {
+    type: 'graph',
+    id: 'gamma-ray',
+    label: 'GR',
+    data: { GR: [[100, 50], [200, 70]] }, // Example columnar data
+    plots: [
+      {
+        id: 'gr-plot',
+        type: 'line',
+        options: { color: 'green', dataAccessor: d => d.GR, legendInfo: () => ({ label: 'GR', unit: 'API' }) },
+      },
+    ],
+    domain: [0, 150],
+    scale: 'linear',
+  },
+  {
+    type: 'stacked',
+    id: 'lithology',
+    label: 'Lithology',
+    data: [ // Example stacked data
+      { depth: 100, color: 'red', label: 'Sand' },
+      { depth: 200, color: 'blue', label: 'Shale' },
+    ],
+    options: { showLabels: true },
+  },
+  // ... more tracks
+];
+```
+
+### Conceptual `createTrackFromConfig` Function
+
+This is a conceptual example. A full implementation would handle all track types and their specific options.
+
+```typescript
+// utils/track-builder.ts
+import { GraphTrack, StackedTrack, ScaleTrack, Track } from '@equinor/videx-wellog';
+
+interface PlotConfig {
+  id: string;
+  type: 'line' | 'area' | 'dip' | 'differential';
+  options: any;
+}
+
+interface TrackConfig {
+  type: 'scale' | 'graph' | 'stacked';
+  id: string;
+  label?: string;
+  data?: any; // For GraphTrack or StackedTrack
+  plots?: PlotConfig[]; // For GraphTrack
+  domain?: [number, number]; // For GraphTrack
+  scale?: 'linear' | 'log'; // For GraphTrack
+  options?: any; // General options for any track type
+}
+
+/**
+ * Factory function to create a Track instance from a configuration object.
+ * @param config The track configuration object.
+ * @returns A Track instance.
+ */
+export function createTrackFromConfig(config: TrackConfig): Track {
+  switch (config.type) {
+    case 'scale':
+      return new ScaleTrack(config.id, config.options);
+    case 'graph':
+      return new GraphTrack(config.id, {
+        label: config.label || config.id,
+        data: config.data,
+        plots: config.plots?.map(plot => ({
+          id: plot.id,
+          type: plot.type,
+          options: plot.options,
+        })),
+        domain: config.domain,
+        scale: config.scale,
+        ...config.options, // Merge additional options
+      });
+    case 'stacked':
+      // Ensure data is wrapped in a Promise-returning function for StackedTrack
+      const stackedData = Array.isArray(config.data) 
+        ? () => Promise.resolve(config.data) 
+        : config.data;
+      return new StackedTrack(config.id, {
+        label: config.label || config.id,
+        data: stackedData,
+        ...config.options, // Merge additional options
+      });
+    default:
+      throw new Error(`Unknown track type: ${config.type}`);
+  }
+}
+
+// Usage:
+// import { complexWellLayout } from './layout';
+// import { createTrackFromConfig } from './utils/track-builder';
+//
+// const tracks = complexWellLayout.map(createTrackFromConfig);
+// viewer.setTracks(...tracks);
 ```
 
 ## Auto-Legend Helper
@@ -484,6 +683,41 @@ export function useLogViewer(
   return isReady ? viewerRef.current : null;
 }
 
+/**
+ * A React Hook to add responsive resizing capability to an existing LogViewer.
+ */
+export function useResponsiveViewer(
+  containerRef: React.RefObject<HTMLElement>,
+  viewer: LogViewer | null
+) {
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || !viewer) return;
+
+    const observer = new ResizeObserver(() => {
+      viewer.adjustToSize();
+    });
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [containerRef, viewer]);
+}
+
+/**
+ * Attaches a persistent resize observer for Vanilla JS environments.
+ * @returns A cleanup function to stop observing.
+ */
+export function createResponsiveViewer(
+  container: HTMLElement,
+  viewer: LogViewer
+): () => void {
+  const observer = new ResizeObserver(() => {
+    viewer.adjustToSize();
+  });
+  observer.observe(container);
+  return () => observer.disconnect();
+}
+
 // Example Component
 // const MyLog = () => {
 //   const ref = useRef(null);
@@ -566,4 +800,147 @@ export function createStackedTrack(
 //   ],
 //   showLabels: true
 // });
+```
+
+## Data Integrity & Validation Helpers
+
+### Coordinate Order Validator
+
+A utility to detect if your data is likely in the wrong order (`[Value, Depth]` instead of `[Depth, Value]`). This is the most common cause of "compressed" or broken plots.
+
+```typescript
+/**
+ * Validates the coordinate order of a dataset.
+ * Heuristic: If the first value (Depth) varies much less than the second (Value), 
+ * or if the first value range is much smaller than the domain while the second is large,
+ * it warns the developer.
+ * 
+ * @param data Array of [d, v] pairs.
+ * @param trackId For logging purposes.
+ */
+export function validateDataOrder(data: [number, number][], trackId: string = 'unknown'): void {
+  if (!data || data.length < 2) return;
+
+  const firstVals = data.map(p => p[0]);
+  const secondVals = data.map(p => p[1]);
+
+  const min1 = Math.min(...firstVals);
+  const max1 = Math.max(...firstVals);
+  const range1 = max1 - min1;
+
+  const min2 = Math.min(...secondVals);
+  const max2 = Math.max(...secondVals);
+  const range2 = max2 - min2;
+
+  // Heuristic: In well logs, Depth range (range1) is usually significantly 
+  // larger than the data value range (range2), especially for deep wells.
+  // If range2 > range1 * 10 AND range1 is very small (e.g., < 100 while depth is 3000+),
+  // it's almost certainly swapped.
+  if (range2 > range1 * 5 && range1 < 500) {
+    console.warn(
+      `[wellog-viz] Potential Coordinate Order Swap detected in track "${trackId}". \n` +
+      `Expected [Depth, Value], but found first-column range (${range1}) to be much \n` +
+      `smaller than second-column range (${range2}). \n` +
+      `Ensure your dataAccessor returns [Depth, Value].`
+    );
+  }
+}
+
+/**
+ * Validates if the DOM container has non-zero dimensions.
+ * SVG/Canvas components will collapse if the parent height is 0.
+ * 
+ * @param container The DOM element to be used for LogViewer.init()
+ */
+export function validateContainer(container: HTMLElement | null): boolean {
+  if (!container) {
+    console.error('[wellog-viz] Validation Error: Container element is null.');
+    return false;
+  }
+
+  const { clientWidth, clientHeight } = container;
+  
+  if (clientHeight <= 0) {
+    console.warn(
+      `[wellog-viz] Runtime Warning: Container height is ${clientHeight}px. \n` +
+      `The visualization will be INVISIBLE. Ensure the container has an \n` +
+      `explicit CSS height (e.g., style="height: 500px").`
+    );
+  }
+
+  if (clientWidth <= 0) {
+    console.warn(`[wellog-viz] Runtime Warning: Container width is ${clientWidth}px.`);
+  }
+
+  return clientHeight > 0 && clientWidth > 0;
+}
+
+## Geologic Palette Utilities
+
+### SY/T 5751 Standard Colors
+
+A helper to retrieve standardized geologic colors without hardcoding hex values.
+
+```typescript
+export const SYT5751 = {
+  'CONG': '#FFD700', // 1.1 Conglomerate
+  'SAND': '#FFFF00', // 2.1 Sandstone
+  'SILT': '#FFFFE0', // 3.1 Siltstone
+  'SHALE': '#BEBEBE',// 4.1 Mudstone
+  'LIME': '#0000FF', // 5.1 Limestone
+  'DOLO': '#A52A2A', // 6.1 Dolomite
+  'COAL': '#000000', // 7.1 Coal
+};
+
+/**
+ * Helper to get geologic color by standard code or mnemonic.
+ * @param key Standard code (e.g., '2.1') or mnemonic (e.g., 'SAND').
+ */
+export function getGeoColor(key: string): string {
+  const palette: Record<string, string> = {
+    '1.1': '#FFD700', 'CONG': '#FFD700',
+    '2.1': '#FFFF00', 'SAND': '#FFFF00',
+    '3.1': '#FFFFE0', 'SILT': '#FFFFE0',
+    '4.1': '#BEBEBE', 'SHALE': '#BEBEBE',
+    '5.1': '#0000FF', 'LIME': '#0000FF',
+    '6.1': '#A52A2A', 'DOLO': '#A52A2A',
+    '7.1': '#000000', 'COAL': '#000000',
+  };
+  return palette[key.toUpperCase()] || '#FFFFFF';
+}
+```
+
+## Multi-Segment / Lithology Plot Helpers
+
+### Segmented Plot Factory
+
+To avoid creating dozens of `Plot` instances for different rock types, use a factory to pre-process segmented data into a single track with multiple plots, or use a custom data accessor that handles segment filtering.
+
+```typescript
+/**
+ * Creates a list of AreaPlots for a segmented dataset.
+ * Each segment (e.g., Sand, Shale) gets its own plot instance for color/pattern.
+ * 
+ * @param data Array of segments: { from, to, type, value }
+ * @param palette Color mapping object.
+ */
+export function createSegmentedPlots(
+  data: { from: number; to: number; type: string; value: number }[],
+  palette: Record<string, string>
+) {
+  const types = [...new Set(data.map(d => d.type))];
+  
+  return types.map(type => ({
+    id: `litho-${type}`,
+    type: 'area',
+    options: {
+      fill: palette[type] || '#ccc',
+      // Filter data for this specific rock type
+      data: data
+        .filter(d => d.type === type)
+        .flatMap(d => [[d.from, d.value], [d.to, d.value]]),
+    }
+  }));
+}
+```
 ```
