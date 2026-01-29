@@ -100,8 +100,25 @@ A helper function to create `GraphTrack` instances with less nesting.
 ### Usage
 
 ```typescript
-import { GraphTrack, graphLegendConfig, StackedTrack } from '@equinor/videx-wellog';
+import { GraphTrack, graphLegendConfig, StackedTrack, ScaleTrack } from '@equinor/videx-wellog';
 import { rgb } from 'd3-color';
+
+/**
+ * Creates a ScaleTrack with ID and Label decoupling.
+ * @param id Unique identifier for the track.
+ * @param label Optional display label (defaults to ID if not provided).
+ * @param options Additional ScaleTrack options.
+ */
+export function createScaleTrack(
+  id: string, 
+  label?: string, 
+  options: any = {}
+): ScaleTrack {
+  return new ScaleTrack(id, {
+    label: label || id,
+    ...options
+  });
+}
 
 /**
  * Parses a CSS color string (Hex, Name, RGB) into an {r, g, b, a} object.

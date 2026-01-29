@@ -42,6 +42,7 @@ If you need full control:
 - **Styles**: Always import `@equinor/videx-wellog/dist/styles/styles.css`.
 - **Mandatory `.update()`**: The `LogViewer` does **not** automatically redraw when tracks are added via `.addTrack()`. You **must** call `viewer.update()` after your configuration is complete to render the content.
 - **No `.resize()` & Responsive Handling**: `LogViewer` does **not** have a `.resize()` method. While it uses `ResizeObserver` internally for simple changes, complex layouts (Grid/Flex/Modals) require manual notification via `viewer.adjustToSize()` if dimensions change after initialization. **Recommendation**: Use `createResponsiveViewer` (Vanilla) or `useResponsiveViewer` (React) from Abstractions to ensure continuous synchronization.
+- **ScaleTrack ID vs Label**: By default, `ScaleTrack` uses its `id` as the header label. If you need a unique ID but a clean label (e.g., ID: `depth-track-01`, Label: `DEPTH`), pass `label` in the options: `new ScaleTrack('depth-track-01', { label: 'DEPTH' })`.
 
 ## Available Components
 

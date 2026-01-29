@@ -26,6 +26,10 @@ This document contains Standard Operating Procedures (SOPs), common pitfalls, an
     - **Requirement**: You **MUST** call `viewer.update()` after your configuration is complete to render the content.
     - **Symptom**: The viewer is initialized and the container has height, but the tracks do not appear.
     - **Fix**: Add `viewer.update();` at the end of your setup logic.
+- **ScaleTrack ID and Label Coupling**:
+    - **The Trap**: Developers often use the display label as the track `id` (e.g., `new ScaleTrack('DEPTH')`). This can lead to collisions if multiple tracks or viewers share the same ID.
+    - **Fix**: Use a unique, stable `id` and provide a readable `label` in the options.
+    - **Example**: `new ScaleTrack('well-1-md', { label: 'DEPTH' })`. This ensures internal logic remains robust while the UI remains user-friendly.
 - **Resize Method (Common Trap)**: The `LogViewer` does **not** have a `.resize()` method.
     - **Behavior**: It automatically responds to container size changes using an internal `ResizeObserver`.
     - **Persistence Warning**: The internal observer is designed for simple scenarios. In complex layouts (Grid/Flex/Modals), you should implement a **persistent** `ResizeObserver` that calls `viewer.adjustToSize()` to ensure the Canvas/SVG layers stay in sync.
