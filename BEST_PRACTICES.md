@@ -22,6 +22,11 @@ This document contains Standard Operating Procedures (SOPs), common pitfalls, an
     - **The Trap**: Developers often use `[Value, Depth]` (Cartesian `[x, y]`).
     - **Symptom**: The plot looks like "compressed data" or horizontal lines, as the large depth values are being interpreted as plot values, exceeding the track's `domain` and `range`.
     - **Bold Reminder**: Always return **`[Depth, Value]`**.
+- **Cold Start Failure (0-dimension init)**:
+    - **The Trap**: Initializing the viewer while the container is hidden or has 0 width/height (common in Grid/Flex layouts or Tabs). The internal canvas will fail to set up correctly.
+    - **Behavior**: Even after the container expands, the viewer remains blank.
+    - **SOP**: Use `ResizeObserver` to detect when the container has a valid size, then call `.init()`.
+    - **Recovery**: If already initialized, call `viewer.adjustToSize()` and `viewer.update()` once the container becomes visible.
 - **Manual Update Requirement (Common Pitfall)**: The `LogViewer` does **not** automatically redraw when tracks are added or modified via `.addTrack()`, `.setTracks()`, or `.removeTrack()`.
     - **Requirement**: You **MUST** call `viewer.update()` after your configuration is complete to render the content.
     - **Symptom**: The viewer is initialized and the container has height, but the tracks do not appear.

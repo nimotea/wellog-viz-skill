@@ -217,14 +217,16 @@ export function validateContainer(el: HTMLElement | null): boolean {
 }
 
 /**
- * Enhanced LogViewer initialization that waits for the container to have dimensions.
- * Use this to prevent the "zero-size init" bug.
+ * Safely initializes the viewer, waiting for the container to have dimensions.
+ * This prevents "Cold Start" rendering issues where the canvas initializes with 0px.
  */
 export async function waitAndInit(viewer: any, container: HTMLElement): Promise<void> {
   return new Promise((resolve) => {
     const check = () => {
       if (validateContainer(container)) {
         viewer.init(container);
+        // Ensure standard update after init
+        viewer.update();
         resolve();
         return true;
       }
@@ -236,7 +238,9 @@ export async function waitAndInit(viewer: any, container: HTMLElement): Promise<
 
     // Wait for size change if initially 0
     const observer = new ResizeObserver(() => {
-      if (check()) observer.disconnect();
+      if (check()) {
+        observer.disconnect();
+      }
     });
     observer.observe(container);
   });
