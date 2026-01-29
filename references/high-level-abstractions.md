@@ -217,6 +217,19 @@ export function validateContainer(el: HTMLElement | null): boolean {
 }
 
 /**
+ * Factory function for ScaleTrack that ensures ID/Label decoupling.
+ * @param id Unique identifier for the track.
+ * @param options Configuration options, including label/title for display.
+ */
+export function createScaleTrack(id: string, options: { label?: string; title?: string; [key: string]: any } = {}): ScaleTrack {
+  // Ensure we prioritize label/title over ID for display purposes
+  return new ScaleTrack(id, {
+    label: options.label || options.title || id,
+    ...options,
+  });
+}
+
+/**
  * Safely initializes the viewer, waiting for the container to have dimensions.
  * This prevents "Cold Start" rendering issues where the canvas initializes with 0px.
  */

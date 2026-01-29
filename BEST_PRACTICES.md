@@ -29,6 +29,10 @@ This document contains Standard Operating Procedures (SOPs), common pitfalls, an
     - **Recovery**: If already initialized, call `viewer.adjustToSize()` and `viewer.update()` once the container becomes visible.
 - **Manual Update Requirement (Common Pitfall)**: The `LogViewer` does **not** automatically redraw when tracks are added or modified via `.addTrack()`, `.setTracks()`, or `.removeTrack()`.
     - **Requirement**: You **MUST** call `viewer.update()` after your configuration is complete to render the content.
+- **ScaleTrack ID & Label Decoupling**:
+    - **The Issue**: Using unique but cryptic IDs (e.g., `track_depth_01`) often results in ugly header labels if the ID is used directly.
+    - **Best Practice**: Always decouple them by passing a explicit `label` or `title` in the options.
+    - **Example**: `new ScaleTrack('depth-1', { label: 'DEPTH (m)' })`.
     - **Symptom**: The viewer is initialized and the container has height, but the tracks do not appear.
     - **Fix**: Add `viewer.update();` at the end of your setup logic.
 - **ScaleTrack ID and Label Coupling**:
