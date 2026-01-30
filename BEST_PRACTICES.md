@@ -13,6 +13,108 @@ This document contains Standard Operating Procedures (SOPs), common pitfalls, an
 - [Internationalization & Text Orientation](#internationalization--text-orientation)
 - [Deep Well Data & Domain Configuration](#deep-well-data--domain-configuration)
 
+## React Integration Patterns
+
+Integrating `videx-wellog` with React requires careful handling of the component lifecycle, `StrictMode`, and DOM references.
+
+### Complete React Example (Production Ready)
+
+This example demonstrates:
+1.  **Strict Mode Compatibility**: Prevents double-initialization bugs.
+2.  **Responsive Resizing**: Uses `ResizeObserver` to keep the viewer in sync.
+3.  **Cleanup Logic**: Properly destroys the viewer to prevent memory leaks.
+4.  **Dynamic Updates**: Updates tracks when props change.
+
+```tsx
+import React, { useEffect, useRef, useState } from 'react';
+import { LogViewer, GraphTrack } from '@equinor/videx-wellog/dist/index.umd.js'; // Use UMD for stability
+import '@equinor/videx-wellog/dist/styles/styles.css';
+
+interface WellLogProps {
+  tracks: any[]; // Replace 'any' with your TrackConfig type
+  domain?: [number, number];
+}
+
+export const WellLogComponent: React.FC<WellLogProps> = ({ tracks, domain = [0, 1000] }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const viewerRef = useRef<LogViewer | null>(null);
+  const isInitRef = useRef(false); // Guard for StrictMode
+
+  // 1. Initialize Viewer
+  useEffect(() => {
+    if (!containerRef.current || isInitRef.current) return;
+
+    const viewer = new LogViewer({
+      domain: domain,
+      // Add other global options here
+    });
+
+    // Initialize only when DOM is ready
+    requestAnimationFrame(() => {
+      if (containerRef.current) {
+        viewer.init(containerRef.current);
+        viewerRef.current = viewer;
+        isInitRef.current = true;
+        
+        // Initial tracks load
+        if (tracks.length > 0) {
+          viewer.setTracks(tracks);
+        }
+      }
+    });
+
+    // Cleanup
+    return () => {
+      // Note: videx-wellog doesn't have a destroy() method, 
+      // but we should clear references.
+      viewerRef.current = null;
+      isInitRef.current = false; 
+      if (containerRef.current) {
+        containerRef.current.innerHTML = ''; // Clear DOM
+      }
+    };
+  }, []); // Empty dep array: Run once on mount
+
+  // 2. Handle Prop Updates (Tracks)
+  useEffect(() => {
+    if (viewerRef.current && isInitRef.current) {
+      viewerRef.current.setTracks(tracks);
+    }
+  }, [tracks]);
+
+  // 3. Handle Prop Updates (Domain/Zoom)
+  useEffect(() => {
+    if (viewerRef.current && isInitRef.current) {
+       // zoomTo requires an array [min, max]
+       viewerRef.current.zoomTo(domain);
+    }
+  }, [domain]);
+
+  // 4. Responsive Resize Handling
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const resizeObserver = new ResizeObserver(() => {
+      if (viewerRef.current && isInitRef.current) {
+        // adjustToSize is the correct method, NOT resize()
+        viewerRef.current.adjustToSize();
+      }
+    });
+
+    resizeObserver.observe(containerRef.current);
+
+    return () => resizeObserver.disconnect();
+  }, []);
+
+  return (
+    <div 
+      ref={containerRef} 
+      style={{ height: '800px', width: '100%', position: 'relative' }} 
+    />
+  );
+};
+```
+
 ## Common Pitfalls
 
 - **Build Entry Point (Consistency Issue)**:

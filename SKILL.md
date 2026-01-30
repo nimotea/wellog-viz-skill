@@ -5,9 +5,22 @@ description: "A tool for generating well-log visualizations using the videx-well
 
 # Well-Log Visualization Skill
 
-This skill provides guidance, code snippets, and high-level utilities for using the `videx-wellog` library.
-
-## Core Concepts
+8→This skill provides guidance, code snippets, and high-level utilities for using the `videx-wellog` library.
+9→
+10→## ⚡ Quick Troubleshooting Index
+11→
+12→Use this index to quickly locate solutions based on symptoms or error messages.
+13→
+14→| Symptom / Error | Possible Cause | Solution |
+15→| :--- | :--- | :--- |
+16→| **Chart is invisible / blank** | Incorrect Domain Configuration | Set `domain` to match your data range (e.g., `[3000, 3500]`). Default is `[0, 1000]`. |
+17→| **Curve is compressed at top** | Data Format Error | Ensure data is `[depth, value]`, NOT `[value, depth]`. |
+18→| **"domain is not iterable"** | `zoomTo()` parameter error | Pass an **array**: `viewer.zoomTo([min, max])`, not individual arguments. |
+19→| **"track.addPlot is not a function"** | API Version Mismatch | Use configuration object: `new GraphTrack(id, { plots: [...] })`. |
+20→| **"viewer.update is not a function"** | Deprecated/Non-existent API | Remove `.update()`. Use `.refresh()` or rely on auto-update. |
+21→| **Horizontal mode broken** | Build Format Mismatch | Import from `dist/index.umd.js`. |
+22→
+23→## Core Concepts
 
 The library revolves around a few key components, augmented by our **Skill Utilities**:
 
@@ -39,6 +52,9 @@ If you need full control:
 
 ## ⚠️ Common Pitfalls
 
+- **Domain Configuration (CRITICAL)**: The default domain is `[0, 1000]`.
+    - **Risk**: If your data is in the range `3000-4000`, it will be completely invisible unless you explicitly set `domain: [3000, 4000]` in the `LogViewer` constructor.
+    - **Symptom**: Blank viewer, or data disappears after zoom reset.
 - **Build Format Consistency**: Using different entry points (e.g., `dist/index.js` vs `dist/index.umd.js`) may lead to inconsistent behavior, especially for features like **Horizontal Mode**. **CRITICAL**: Always use `index.umd.js` if you encounter rendering anomalies in non-standard environments.
 - **Coordinate Order**: Data MUST be in `[Depth, Value]` format. Using `[Value, Depth]` will cause incorrect rendering (compressed data).
 - **Lifecycle**: `LogViewer.init()` must be called inside `requestAnimationFrame` after the DOM is ready. **Important**: `init()` returns the instance, but features like `overlay` and `zoomTo` are ONLY available after `init()` has executed.
@@ -55,7 +71,17 @@ If you need full control:
 -   **Tracks**: `ScaleTrack`, `GraphTrack`, `StackedTrack`, `DualScaleTrack`.
 -   **Plots**: `LinePlot`, `AreaPlot`, `DotPlot`, `DifferentialPlot`, `DipPlot`.
 
-## 📚 Knowledge Base
+## � API Version Compatibility
+
+Significant changes occurred between v0.x and v1.x (current).
+
+| Feature           | v0.x (Legacy)                        | v1.x (Current)                                         |
+| :---------------- | :----------------------------------- | :----------------------------------------------------- |
+| **Add Plots**     | `track.addPlot(plot)`                | `new GraphTrack(id, { plots: [...] })` (Config Object) |
+| **Scale Options** | `new ScaleTrack(id, { ...options })` | Same, but improved `tickConfig` support.               |
+| **Update**        | `viewer.update()` (Internal)         | Removed. Use auto-update or `.refresh()`.              |
+
+## �📚 Knowledge Base
 
 ### 🚀 Getting Started
 - **Basic Examples**: [EXAMPLES.md](references/examples.md) - Standard boilerplate for Viewers and Tracks.
