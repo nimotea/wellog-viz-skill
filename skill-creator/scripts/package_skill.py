@@ -82,8 +82,14 @@ def package_skill(skill_path, output_dir=None):
                 if "upstream-src" in file_path.parts:
                     continue
 
+                # Exclude any existing .skill files to avoid nested packaging
+                if file_path.suffix == '.skill':
+                    continue
+
                 if file_path.is_file():
                     # Calculate the relative path within the zip
+                    # We want the content of the skill folder to be at the root of the zip, 
+                    # but contained in a folder named after the skill.
                     arcname = file_path.relative_to(skill_path.parent)
                     zipf.write(file_path, arcname)
                     print(f"  Added: {arcname}")
