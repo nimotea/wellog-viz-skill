@@ -3,15 +3,15 @@
 This document contains Standard Operating Procedures (SOPs), common pitfalls, and troubleshooting guides for `videx-wellog`.
 
 ## Table of Contents
-- [Common Pitfalls](#common-pitfalls)
-- [TypeScript & Build Configuration](#typescript--build-configuration)
-- [Robust Initialization (SOP)](#robust-initialization-sop)
-- [Data Preparation (SOP)](#data-preparation-sop)
-- [Responsive Layout & Resize Handling](#responsive-layout--resize-handling)
-- [React Integration Patterns](#react-integration-patterns)
-- [Global Configuration & UI Wrappers](#global-configuration--ui-wrappers)
-- [Internationalization & Text Orientation](#internationalization--text-orientation)
-- [Deep Well Data & Domain Configuration](#deep-well-data--domain-configuration)
+- [Best Practices \& Troubleshooting](#best-practices--troubleshooting)
+  - [Table of Contents](#table-of-contents)
+  - [React Integration Patterns](#react-integration-patterns)
+    - [Complete React Example (Production Ready)](#complete-react-example-production-ready)
+  - [Performance Optimization](#performance-optimization)
+  - [Error Handling Patterns](#error-handling-patterns)
+  - [Testing Strategies](#testing-strategies)
+  - [Common Pitfalls](#common-pitfalls)
+    - [Debugging \& Integration](#debugging--integration)
 
 ## React Integration Patterns
 
@@ -114,6 +114,28 @@ export const WellLogComponent: React.FC<WellLogProps> = ({ tracks, domain = [0, 
   );
 };
 ```
+
+## Performance Optimization
+
+Rendering performance degrades with high-frequency data (>100k points).
+
+1.  **Data Downsampling**: Do not pass raw high-res data (e.g., 1cm sampling) for a 500m view. Use `LTTB` (Largest-Triangle-Three-Buckets) or simple decimation to reduce points to match pixel density.
+2.  **Avoid React Re-renders**: Do not wrap `LogViewer` in a component that re-renders on every mouse move. Isolate it with `React.memo` or `useMemo`.
+3.  **Columnar Data**: Convert row-based objects (`[{d:1, v:2}, ...]`) to simple arrays (`[[1,2], ...]`) *once* before passing to the viewer. Avoid doing this transformation inside `dataAccessor` (runs on every render).
+
+## Error Handling Patterns
+
+| Error Message                         | Cause                                                                         | Fix                                                                     |
+| :------------------------------------ | :---------------------------------------------------------------------------- | :---------------------------------------------------------------------- |
+| `undefined is not iterable`           | `zoomTo()` called with separate args, or `GraphTrack` missing top-level data. | Use `zoomTo([min, max])`; Ensure `new GraphTrack(id, { data: ... })`.   |
+| `datapoints.filter is not a function` | Invalid data structure passed to track.                                       | Ensure data is an array of `[depth, value]` arrays or object of arrays. |
+| `viewer.resize is not a function`     | Calling non-existent method.                                                  | Use `viewer.adjustToSize()`.                                            |
+
+## Testing Strategies
+
+1.  **Unit Test**: Mock `LogViewer` and assert that `setTracks` is called with correct config.
+2.  **Integration Test**: Check if container has children (canvas/svg) after `init()`.
+3.  **Visual Regression**: Use Playwright/Puppeteer to screenshot the canvas. **Note**: Canvas rendering varies by GPU/Browser; use a high tolerance (5%).
 
 ## Common Pitfalls
 
