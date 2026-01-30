@@ -238,8 +238,8 @@ export async function waitAndInit(viewer: any, container: HTMLElement): Promise<
     const check = () => {
       if (validateContainer(container)) {
         viewer.init(container);
-        // Ensure standard update after init
-        viewer.update();
+241→        // Ensure tracks are rendered after init
+242→        viewer.refresh();
         resolve();
         return true;
       }

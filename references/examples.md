@@ -17,10 +17,10 @@ const scaleTrack = new ScaleTrack('scale');
 // Use new LogViewer with explicit options instead.
 const viewer = new LogViewer({ showLegend: false, showTitles: false });
 
-// Ensure div is attached to DOM before init
-requestAnimationFrame(() => {
-  viewer.init(div).addTrack(scaleTrack);
-  viewer.update(); // ⚠️ IMPORTANT: Must call update() to render tracks
+// Ensure div is attached to DOM before init21→requestAnimationFrame(() => {
+22→  viewer.init(div).addTrack(scaleTrack);
+23→  // viewer.refresh(); // Optional: setTracks/addTrack handles updates automatically
+24→});
 });
 ```
 
@@ -86,7 +86,7 @@ requestAnimationFrame(() => {
     graphTrack1,
     graphTrack2,
   );
-  viewer.update(); // ⚠️ IMPORTANT: Must call update() to render tracks
+  // viewer.refresh(); // Optional: Use refresh() to force immediate render if needed
 });
 ```
 
@@ -115,10 +115,9 @@ const stackedTrack = new StackedTrack('id', {
   // MUST be a function returning a Promise!
   data: () => Promise.resolve(data),
 });
-
-requestAnimationFrame(() => {
-  viewer.init(div).setTracks([scaleTrack, stackedTrack]);
-  viewer.update(); // ⚠️ IMPORTANT: Must call update() to render tracks
+119→requestAnimationFrame(() => {
+120→  viewer.init(div).setTracks([scaleTrack, stackedTrack]);
+121→});
 });
 ```
 
@@ -140,7 +139,6 @@ const tracks = createTracks(); // Helper function to create tracks
 
 requestAnimationFrame(() => {
   viewer.init(div).setTracks(tracks);
-  viewer.update(); // ⚠️ IMPORTANT: Must call update() to render tracks
 });
 ```
 
@@ -180,10 +178,9 @@ const scaleHandler = new InterpolatedScaleHandler(
 ).range([0, 500]);
 
 viewer.scaleHandler = scaleHandler;
-
-requestAnimationFrame(() => {
-  viewer.init(div).setTracks(scaleTrack1, scaleTrack2);
-  viewer.update(); // ⚠️ IMPORTANT: Must call update() to render tracks
+184→requestAnimationFrame(() => {
+185→  viewer.init(div).setTracks(scaleTrack1, scaleTrack2);
+186→});
 });
 ```
 
@@ -390,7 +387,6 @@ const viewer = new LogViewer({ showLegend: true, showTitles: true }).setTracks(s
 
 requestAnimationFrame(() => {
   viewer.init(div);
-  viewer.update(); // ⚠️ IMPORTANT: Must call update() to render tracks
 });
 ```
 
@@ -494,10 +490,9 @@ const viewer = new LogViewer({
   showTitles: true,
   domain: [0, 3000], 
 });
-
-requestAnimationFrame(() => {
-  viewer.init(div).setTracks(lithoTrack, depthTrack, resTrack, poroTrack);
-  viewer.update(); // ⚠️ IMPORTANT: Must call update() to render tracks
+494→requestAnimationFrame(() => {
+495→  viewer.init(div).setTracks(lithoTrack, depthTrack, resTrack, poroTrack);
+496→});
 });
 ```
 

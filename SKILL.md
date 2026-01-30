@@ -11,7 +11,7 @@ This skill provides guidance, code snippets, and high-level utilities for using 
 
 The library revolves around a few key components, augmented by our **Skill Utilities**:
 
-1.  **LogViewer**: The main container. **Note**: `LogViewer` does **not** provide a `.resize()` method; it automatically responds to container size changes. **Important**: Always call `.update()` after adding or modifying tracks to trigger a redraw. **Recommendation**: Use `mountLogViewer` (from Abstractions) for safe async initialization.
+1.  **LogViewer**: The main container. **Note**: `LogViewer` does **not** provide a `.resize()` method; it automatically responds to container size changes. **Important**: Tracks are automatically updated when using `.setTracks()` or `.addTrack()`. For manual redraws, use `.refresh()`. **Recommendation**: Use `mountLogViewer` (from Abstractions) for safe async initialization.
 2.  **Tracks**: Vertical strips (e.g., `GraphTrack`, `ScaleTrack`). **Recommendation**: Use `createSimpleTrack` for reduced boilerplate.
 3.  **Plots**: Visual representations (e.g., `LinePlot`, `AreaPlot`).
 4.  **ScaleHandler**: Manages depth scale/zooming.
@@ -31,16 +31,19 @@ Instead of manually handling DOM and Events, use the **High-Level Abstractions**
 If you need full control:
 
 1.  **Import Styles**: `import '@equinor/videx-wellog/dist/styles/styles.css';`
-2.  **Instantiate**: `new LogViewer(options)`.
-3.  **Lifecycle**: Ensure `init(div)` is called inside `requestAnimationFrame`. Note that `init()` returns the viewer instance for chainable configuration.
+2.  **Import Library**:
+    - **Recommended (Stable)**: `import { LogViewer } from '@equinor/videx-wellog/dist/index.umd.js';` (Best for horizontal mode compatibility).
+    - **Alternative**: `import { LogViewer } from '@equinor/videx-wellog';` (Uses `index.cjs.js` by default).
+3.  **Instantiate**: `new LogViewer(options)`.
+4.  **Lifecycle**: Ensure `init(div)` is called inside `requestAnimationFrame`. Note that `init()` returns the viewer instance for chainable configuration.
 
 ## ⚠️ Common Pitfalls
 
-- **Container Dimensions**: The parent DOM element **MUST** have a defined pixel height and width (e.g., `height: 500px`). **CRITICAL**: If the container has 0 size during `init()`, the visualization will be permanently broken as Canvas/SVG layers will be generated with 0px and won't self-correct later. Always ensure `rect.width > 0 && rect.height > 0` before calling `init()`.
+- **Build Format Consistency**: Using different entry points (e.g., `dist/index.js` vs `dist/index.umd.js`) may lead to inconsistent behavior, especially for features like **Horizontal Mode**. **CRITICAL**: Always use `index.umd.js` if you encounter rendering anomalies in non-standard environments.
 - **Coordinate Order**: Data MUST be in `[Depth, Value]` format. Using `[Value, Depth]` will cause incorrect rendering (compressed data).
 - **Lifecycle**: `LogViewer.init()` must be called inside `requestAnimationFrame` after the DOM is ready. **Important**: `init()` returns the instance, but features like `overlay` and `zoomTo` are ONLY available after `init()` has executed.
 - **Styles**: Always import `@equinor/videx-wellog/dist/styles/styles.css`.
-- **Mandatory `.update()`**: The `LogViewer` does **not** automatically redraw when tracks are added via `.addTrack()`. You **must** call `viewer.update()` after your configuration is complete to render the content.
+- **No `.update()` method**: The `LogViewer` does **not** have an `.update()` method. To force a redraw, use `.refresh()`. Note that `setTracks()` and `addTrack()` handle internal updates automatically.
 - **No `.resize()` & Responsive Handling**: `LogViewer` does **not** have a `.resize()` method. While it uses `ResizeObserver` internally for simple changes, complex layouts (Grid/Flex/Modals) require manual notification via `viewer.adjustToSize()` if dimensions change after initialization. **Recommendation**: Use `createResponsiveViewer` (Vanilla) or `useResponsiveViewer` (React) from Abstractions to ensure continuous synchronization.
 - **Cold Start Rendering Issue**: If the container has `width: 0` or `height: 0` during `viewer.init(dom)`, the internal canvas context will be invalid. The viewer **will not** automatically recover when the container eventually expands. **SOP**: Wait until `clientWidth > 0 && clientHeight > 0` before calling `.init()`, or call `viewer.adjustToSize()` immediately after the container becomes visible.
 - **ScaleTrack ID vs Label**: By default, `ScaleTrack` uses its `id` as the header label. If you need a unique ID but a clean label (e.g., ID: `depth-track-01`, Label: `DEPTH`), pass `label` in the options: `new ScaleTrack('depth-track-01', { label: 'DEPTH' })`.

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>wellog-viz Debug Template</title>
+    <!-- 1. 基础样式：确保容器有明确的高度 -->
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+        #viz-container {
+            width: 100%;
+            height: 100vh; /* 必须指定高度，否则 Canvas 无法渲染 */
+            background-color: #f5f5f5;
+        }
+        .debug-panel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            border: 1px solid #ccc;
+            z-index: 1000;
+            font-family: sans-serif;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="debug-panel">
+        <strong>Debug Console</strong><br>
+        Status: <span id="status">Initializing...</span><br>
+        <button onclick="toggleHorizontal()">Toggle Horizontal</button>
+    </div>
+
+    <div id="viz-container"></div>
+
+    <!-- 2. 关键库加载顺序 -->
+    <!-- 推荐使用 UMD 版本以获得最佳兼容性 -->
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <!-- 假设开发者在本地调试，请根据实际路径替换 -->
+    <!-- <script src="./dist/index.umd.js"></script> -->
+    <script src="https://cdn.jsdelivr.net/npm/@equinor/videx-wellog/dist/index.umd.js"></script>
+
+    <script>
+        /**
+         * 3. 模拟参数注入与调试逻辑
+         */
+        const { LogViewer, GraphTrack, ScaleTrack } = window['videx-wellog'];
+
+        async function initDebug() {
+            const container = document.getElementById('viz-container');
+            const statusEl = document.getElementById('status');
+
+            try {
+                // 初始化 Viewer
+                const viewer = new LogViewer({
+                    domain: [0, 1000],
+                    showLegend: true,
+                    showTitles: true,
+                });
+
+                // 模拟数据
+                const mockData = Array.from({ length: 100 }, (_, i) => ({
+                    depth: i * 10,
+                    value: Math.random() * 100
+                }));
+
+                // 创建轨道
+                const scaleTrack = new ScaleTrack('scale', { label: 'Depth' });
+                const graphTrack = new GraphTrack('graph', {
+                    label: 'Gamma Ray',
+                    data: mockData,
+                    plots: [{ type: 'line', color: '#ff0000' }]
+                });
+
+                // 挂载并设置轨道
+                // 注意：LogViewer 会自动驱动渲染
+                viewer.init(container).setTracks([scaleTrack, graphTrack]);
+
+                statusEl.innerText = 'Ready';
+                statusEl.style.color = 'green';
+                
+                window.viewer = viewer; // 暴露到全局方便控制台调试
+            } catch (err) {
+                console.error('Init Error:', err);
+                statusEl.innerText = 'Error: ' + err.message;
+                statusEl.style.color = 'red';
+            }
+        }
+
+        function toggleHorizontal() {
+            if (window.viewer) {
+                const current = window.viewer.options.horizontal;
+                window.viewer.setOptions({ horizontal: !current });
+            }
+        }
+
+        // 确保 DOM 加载后执行
+        window.onload = initDebug;
+    </script>
+</body>
+</html>
