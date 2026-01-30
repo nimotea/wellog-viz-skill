@@ -180,7 +180,7 @@ Rendering performance degrades with high-frequency data (>100k points).
 ### Debugging & Integration
 - **Isolated Debugging (CRITICAL)**: When integrating into complex environments (e.g., Low-code platforms like Huozige, PowerApps), **NEVER** debug directly in the platform.
     - **The Risk**: Platform-specific CSS, global variables, or caching mechanisms can obscure root causes.
-    - **The Solution**: Use the [debug.html](file:///d:/Code/wellog-viz-skill/references/debug.html) template to verify your logic in a clean environment.
+161→    - **The Solution**: Use the [debug.html](../assets/debug.html) template to verify your logic in a clean environment.
     - **Workflow**:
         1. Copy your track configuration and data to `debug.html`.
         2. Verify if it renders correctly in a standard browser.

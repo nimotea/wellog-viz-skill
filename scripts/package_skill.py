@@ -78,6 +78,10 @@ def package_skill(skill_path, output_dir=None):
                 if "skill-creator" in file_path.parts:
                     continue
 
+                # Exclude build scripts
+                if file_path.name in ["package_skill.py", "init_skill.py", "quick_validate.py"]:
+                    continue
+
                 # Exclude the entire upstream-src directory as users will have the library installed
                 if "upstream-src" in file_path.parts:
                     continue
