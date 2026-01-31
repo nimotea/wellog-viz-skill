@@ -890,6 +890,33 @@ export async function updateTrackData(
   }
 }
 
+/**
+ * Safely switches the LogViewer between Horizontal and Vertical modes.
+ * This handles the complexity of propagating the 'horizontal' flag to all tracks
+ * and forcing a layout update.
+ * 
+ * @param viewer The LogViewer instance
+ * @param enableHorizontal true for Horizontal mode, false for Vertical
+ */
+export function setHorizontalMode(viewer: any, enableHorizontal: boolean): void {
+  if (!viewer) return;
+
+  // 1. Update global option
+  viewer.options.horizontal = enableHorizontal;
+
+  // 2. Propagate to existing tracks (they might hold their own copy of options)
+  const tracks = viewer.getTracks();
+  tracks.forEach((track: any) => {
+    if (track.options) {
+      track.options.horizontal = enableHorizontal;
+    }
+  });
+
+  // 3. Re-set tracks to force DOM re-layout (flex-direction changes etc.)
+  // Just calling refresh() is often not enough for structural changes.
+  viewer.setTracks(tracks);
+}
+
 // Example Usage:
 // await updateTrackData(anyTrack, newData, viewer);
 

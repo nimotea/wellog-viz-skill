@@ -120,6 +120,28 @@ export const WellLogComponent: React.FC<WellLogProps> = ({ tracks, domain = [0, 
 };
 ```
 
+## LogController Configuration & Reactivity
+
+The `LogViewer` (LogController) has two types of options: **Reactive** and **Structural**.
+
+### 1. Structural Options (Horizontal Mode, Show Titles)
+Properties like `horizontal` and `showTitles` affect the fundamental DOM structure and layout direction of all tracks.
+- **Behavior**: Modifying `viewer.options.horizontal = true` directly will **NOT** automatically re-layout the tracks.
+- **Solution**: Use the `setHorizontalMode` abstraction or manually re-set tracks.
+
+```typescript
+import { setHorizontalMode } from './high-level-abstractions';
+
+// ✅ Correct Way: Updates option, propagates to tracks, and triggers re-layout
+setHorizontalMode(viewer, true);
+```
+
+### 2. Reactive Options (Domain, Zoom)
+Properties like `domain` trigger immediate updates via setters.
+- **Behavior**: `viewer.zoomTo([0, 500])` works immediately.
+
+---
+
 ## Dynamic Data Updates
 
 Updating data for existing tracks should follow these patterns to ensure consistency across different track types and library versions.
