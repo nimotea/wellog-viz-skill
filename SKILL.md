@@ -86,11 +86,15 @@ Significant changes occurred between v0.x and v1.x (current).
 ## �📚 Knowledge Base
 
 ### 🚀 Getting Started
-- **Basic Examples**: [examples.md](references/examples.md) - Standard boilerplate for Viewers and Tracks.
-- **Data Guides**: [data-guides.md](references/data-guides.md) - **UPDATED**. JSON templates and mock data generators.
-- **Color Palettes**: [palettes.md](references/palettes.md) - Geologic standard colors (SY/T 5751).
+- **Basic Examples**: [EXAMPLES.md](references/examples.md) - Standard boilerplate for Viewers and Tracks.
+- **Mock Data**: [MOCK_DATA.md](references/mock-data.md) - Generators for test datasets.
+- **Color Palettes**: [PALETTES.md](references/palettes.md) - **NEW**. Geologic standard colors (SY/T 5751).
 
-### 🧩 Patterns & Utilities
--   **Visual Patterns**: [visual-patterns.md](references/visual-patterns.md) - Map visual requirements to code.
--   **High-Level Abstractions**: [high-level-abstractions.md](references/high-level-abstractions.md) - **Recommended**. Production-ready utilities for Readouts and Async Init.
--   **Best Practices**: [best-practices.md](references/best-practices.md) - SOPs, Troubleshooting, and **React Integration**.
+### 🧩 Patterns & Recipes
+-   **Visual Patterns**: [VISUAL_PATTERNS.md](references/visual-patterns.md) - Map visual requirements (screenshots) to code.
+-   **JSON Templates**: [JSON_TEMPLATES.md](references/json-templates.md) - **NEW**. Standard JSON data formats for copy-pasting into designers.
+-   **Advanced Configs**: [ADVANCED_EXAMPLES.md](references/advanced-examples.md) - Complex layouts (Triple Combo, Horizontal).
+
+### 🛠️ Production Utilities
+-   **High-Level Abstractions**: [HIGH_LEVEL_ABSTRACTIONS.md](references/high-level-abstractions.md) - **Recommended**. Helper functions for Readouts, Auto-Legends, and Async Init.
+-   **Best Practices**: [BEST_PRACTICES.md](references/best-practices.md) - SOPs, Troubleshooting, and **React Integration**.

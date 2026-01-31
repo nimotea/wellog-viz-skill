@@ -259,11 +259,41 @@ Rendering performance degrades with high-frequency data (>100k points).
 ### Debugging & Integration
 - **Isolated Debugging (CRITICAL)**: When integrating into complex environments (e.g., Low-code platforms like Huozige, PowerApps), **NEVER** debug directly in the platform.
     - **The Risk**: Platform-specific CSS, global variables, or caching mechanisms can obscure root causes.
-161→    - **The Solution**: Use the [debug.html](../assets/debug.html) template to verify your logic in a clean environment.
+    - **The Solution**: Use the [debug.html](../assets/debug.html) template to verify your logic in a clean environment.
     - **Workflow**:
         1. Copy your track configuration and data to `debug.html`.
         2. Verify if it renders correctly in a standard browser.
         3. If it works in `debug.html` but fails in the platform, the issue is likely **CSS pollution** (check container height) or **JS loading order** (ensure D3 is loaded before wellog).
+
+- **Explicit Container Caching (Plugin/Host Environment)**:
+    - **The Problem**: In dynamic host environments (Forguncy, PowerBI, React wrappers), the DOM element passed to `init()` might be detached, moved, or hard to query later via jQuery/`document.querySelector`.
+    - **The Trap**: Relying on `$(this.dom).find('.my-container')` in subsequent updates (like `onResize` or `refresh`) often fails if the host re-renders the parent.
+    - **Best Practice**: Explicitly cache the container reference during the initialization phase.
+    - **Code Pattern**:
+    ```javascript
+    // ✅ ROBUST PATTERN
+    class MyPlugin {
+      init(container) {
+        // 1. Validate and Cache immediately
+        if (!container) throw new Error("Container is null");
+        this._container = container; 
+        
+        // 2. Initialize Viewer with cached reference
+        this._viewer = new LogViewer({...});
+        this._viewer.init(this._container);
+      }
+      
+      update() {
+        // 3. Use cached reference for size checks or re-mounts
+        if (!this._container.isConnected) {
+             console.warn("Container detached!");
+             return;
+        }
+        this._viewer.refresh();
+      }
+    }
+    ```
+
 - **Update Method (CRITICAL)**: The `LogViewer` does **NOT** have an `.update()` method.
     - **Danger**: Calling `viewer.update()` will throw a `TypeError: viewer.update is not a function`.
     - **History**: This was an internal method in older versions or other related components, but is not present in the public `LogViewer` API.
