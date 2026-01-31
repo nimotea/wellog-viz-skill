@@ -7,6 +7,11 @@ This document contains Standard Operating Procedures (SOPs), common pitfalls, an
   - [Table of Contents](#table-of-contents)
   - [React Integration Patterns](#react-integration-patterns)
     - [Complete React Example (Production Ready)](#complete-react-example-production-ready)
+  - [Dynamic Data Updates](#dynamic-data-updates)
+    - [0. Unified Update Method (RECOMMENDED)](#0-unified-update-method-recommended)
+    - [1. GraphTrack (Line, Area, Dot Plots)](#1-graphtrack-line-area-dot-plots)
+    - [2. StackedTrack (Lithology, Formations)](#2-stackedtrack-lithology-formations)
+    - [3. Summary of Update Methods](#3-summary-of-update-methods)
   - [Performance Optimization](#performance-optimization)
   - [Error Handling Patterns](#error-handling-patterns)
   - [Testing Strategies](#testing-strategies)
@@ -114,6 +119,58 @@ export const WellLogComponent: React.FC<WellLogProps> = ({ tracks, domain = [0, 
   );
 };
 ```
+
+## Dynamic Data Updates
+
+Updating data for existing tracks should follow these patterns to ensure consistency across different track types and library versions.
+
+### 0. Unified Update Method (RECOMMENDED)
+To avoid dealing with track-specific implementation details (Graph vs Stacked), use the `updateTrackData` abstraction. This handles type detection and refresh automatically.
+
+```typescript
+import { updateTrackData } from './high-level-abstractions';
+
+// Works for ANY track type (GraphTrack, StackedTrack, etc.)
+await updateTrackData(myTrack, newData, viewer);
+```
+
+### 1. GraphTrack (Line, Area, Dot Plots)
+`GraphTrack` uses a `data` setter that triggers internal plot updates. 
+- **Standard Pattern**: Directly set the `.data` property.
+- **Verification**: If the track does not immediately redraw, call `viewer.refresh()`.
+
+```typescript
+// Update data for a GraphTrack
+const track = viewer.getTrackById('gr-track');
+track.data = newDataset; 
+
+// Force a redraw if needed (usually handled automatically by set data)
+viewer.refresh();
+```
+
+### 2. StackedTrack (Lithology, Formations)
+`StackedTrack` often requires its data to be a function returning a `Promise`.
+- **Standard Pattern**: Use the `setStackedTrackData` abstraction to handle data merging and refresh.
+- **Manual Pattern**: Update your external state and then call `viewer.refresh()` to trigger the re-fetch.
+
+```typescript
+import { setStackedTrackData } from './high-level-abstractions';
+
+// Using the abstraction (Simulates .setData())
+await setStackedTrackData(stackedTrack, [ { from: 100, to: 200, name: 'Shale' } ], viewer);
+
+// Manual update:
+this.currentLithology = updatedData;
+viewer.refresh(); // Triggers re-fetch
+```
+
+### 3. Summary of Update Methods
+| Method               | Purpose           | When to use                                                                                            |
+| :------------------- | :---------------- | :----------------------------------------------------------------------------------------------------- |
+| `updateTrackData()`  | **Unified API**   | **Recommended.** Automatically handles type detection and refresh for any track.                       |
+| `track.data = val`   | Property Setter   | Primary way to update data for `GraphTrack`. See [JSON Templates](json-templates.md) for data schemas. |
+| `viewer.refresh()`   | Global Redraw     | Triggers re-fetching for function-based data (like `StackedTrack`) and forces all tracks to repaint.   |
+| `viewer.setTracks()` | Re-initialization | Use when adding/removing tracks or completely replacing the track list.                                |
 
 ## Performance Optimization
 

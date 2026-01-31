@@ -18,7 +18,8 @@ description: "A tool for generating well-log visualizations using the videx-well
 18→| **"domain is not iterable"** | `zoomTo()` parameter error | Pass an **array**: `viewer.zoomTo([min, max])`, not individual arguments. |
 19→| **"track.addPlot is not a function"** | API Version Mismatch | Use configuration object: `new GraphTrack(id, { plots: [...] })`. |
 20→| **"viewer.update is not a function"** | Deprecated/Non-existent API | Remove `.update()`. Use `.refresh()` or rely on auto-update. |
-21→| **Horizontal mode broken** | Build Format Mismatch | Import from `dist/index.umd.js`. |
+| **Invalid Data Format** | JSON structure mismatch | Refer to [JSON Templates](references/json-templates.md) for standard schemas. |
+| **Horizontal mode broken** | Build Format Mismatch | Import from `dist/index.umd.js`. |
 22→
 23→## Core Concepts
 
@@ -60,6 +61,7 @@ If you need full control:
 - **Lifecycle**: `LogViewer.init()` must be called inside `requestAnimationFrame` after the DOM is ready. **Important**: `init()` returns the instance, but features like `overlay` and `zoomTo` are ONLY available after `init()` has executed.
 - **Styles**: Always import `@equinor/videx-wellog/dist/styles/styles.css`.
 - **No `.update()` method**: The `LogViewer` does **not** have an `.update()` method. To force a redraw, use `.refresh()`. Note that `setTracks()` and `addTrack()` handle internal updates automatically.
+- **Dynamic Data Updates**: For `GraphTrack`, update data via `track.data = newData`. For `StackedTrack` (using function-based data), update your state and call `viewer.refresh()`. See [Best Practices](references/best-practices.md#dynamic-data-updates) for details.
 - **No `.resize()` & Responsive Handling**: `LogViewer` does **not** have a `.resize()` method. While it uses `ResizeObserver` internally for simple changes, complex layouts (Grid/Flex/Modals) require manual notification via `viewer.adjustToSize()` if dimensions change after initialization. **Recommendation**: Use `createResponsiveViewer` (Vanilla) or `useResponsiveViewer` (React) from Abstractions to ensure continuous synchronization.
 - **Cold Start Rendering Issue**: If the container has `width: 0` or `height: 0` during `viewer.init(dom)`, the internal canvas context will be invalid. The viewer **will not** automatically recover when the container eventually expands. **SOP**: Wait until `clientWidth > 0 && clientHeight > 0` before calling `.init()`, or call `viewer.adjustToSize()` immediately after the container becomes visible.
 - **ScaleTrack ID vs Label**: By default, `ScaleTrack` uses its `id` as the header label. If you need a unique ID but a clean label (e.g., ID: `depth-track-01`, Label: `DEPTH`), pass `label` in the options: `new ScaleTrack('depth-track-01', { label: 'DEPTH' })`.
@@ -84,14 +86,11 @@ Significant changes occurred between v0.x and v1.x (current).
 ## �📚 Knowledge Base
 
 ### 🚀 Getting Started
-- **Basic Examples**: [EXAMPLES.md](references/examples.md) - Standard boilerplate for Viewers and Tracks.
-- **Mock Data**: [MOCK_DATA.md](references/mock-data.md) - Generators for test datasets.
-- **Color Palettes**: [PALETTES.md](references/palettes.md) - **NEW**. Geologic standard colors (SY/T 5751).
+- **Basic Examples**: [examples.md](references/examples.md) - Standard boilerplate for Viewers and Tracks.
+- **Data Guides**: [data-guides.md](references/data-guides.md) - **UPDATED**. JSON templates and mock data generators.
+- **Color Palettes**: [palettes.md](references/palettes.md) - Geologic standard colors (SY/T 5751).
 
-### 🧩 Patterns & Recipes
--   **Visual Patterns**: [VISUAL_PATTERNS.md](references/visual-patterns.md) - Map visual requirements (screenshots) to code.
--   **Advanced Configs**: [ADVANCED_EXAMPLES.md](references/advanced-examples.md) - Complex layouts (Triple Combo, Horizontal).
-
-### 🛠️ Production Utilities
--   **High-Level Abstractions**: [HIGH_LEVEL_ABSTRACTIONS.md](references/high-level-abstractions.md) - **Recommended**. Helper functions for Readouts, Auto-Legends, and Async Init.
--   **Best Practices**: [BEST_PRACTICES.md](references/best-practices.md) - SOPs, Troubleshooting, and **React Integration**.
+### 🧩 Patterns & Utilities
+-   **Visual Patterns**: [visual-patterns.md](references/visual-patterns.md) - Map visual requirements to code.
+-   **High-Level Abstractions**: [high-level-abstractions.md](references/high-level-abstractions.md) - **Recommended**. Production-ready utilities for Readouts and Async Init.
+-   **Best Practices**: [best-practices.md](references/best-practices.md) - SOPs, Troubleshooting, and **React Integration**.

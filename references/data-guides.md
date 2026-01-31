@@ -1,5 +1,63 @@
-# Mock Data Generation
+# Data Generation & Templates
 
+This file provides both programmatic mock data generators and standard JSON templates for `videx-wellog` tracks.
+
+## 1. Standard JSON Templates
+Use these templates when manually setting data for tracks. They ensure correct coordinate order and object structures.
+
+### GraphTrack (Standard Curve)
+**Format**: `[[depth, value], [depth, value], ...]`
+```json
+[
+  [100.0, 45.2],
+  [100.1, 46.5],
+  [100.2, 44.8],
+  [100.3, 47.1],
+  [100.4, 45.9]
+]
+```
+
+### GraphTrack (Columnar / Multiple Datasets)
+**Format**: Object containing named arrays.
+```json
+{
+  "GR": [[100, 45], [101, 46]],
+  "NPHI": [[100, 0.25], [101, 0.26]],
+  "RHOB": [[100, 2.3], [101, 2.4]]
+}
+```
+
+### StackedTrack (Lithology / Formations)
+**CRITICAL**: Colors MUST be `{r, g, b}` objects.
+```json
+[
+  {
+    "from": 100.0,
+    "to": 150.5,
+    "name": "Sandstone",
+    "color": { "r": 255, "g": 255, "b": 0 }
+  },
+  {
+    "from": 150.5,
+    "to": 200.0,
+    "name": "Shale",
+    "color": { "r": 128, "g": 128, "b": 128 }
+  }
+]
+```
+
+### DipTrack / Tadpole Plots
+**Format**: `[[depth, dip, azimuth, { color, shape }], ...]`
+```json
+[
+  [1000.0, 15, 45, { "color": "red", "shape": "circle" }],
+  [1010.0, 20, 180, { "color": "blue", "shape": "triangle" }]
+]
+```
+
+---
+
+## 2. Programmatic Mock Data Generation
 Generating mock data is essential for testing well-log visualizations. Here are some helper patterns.
 
 ## Basic Linear Data
@@ -164,7 +222,6 @@ export const generateSineWithNoise = (domainStart = 0, domainEnd = 1500, step = 
   const noise = sin.map(v => [v[0], v[1] * Math.random() + 35]);
   return { sin, noise };
 };
-```
 ```
 
 ## Sine Wave with Varied Noise (Reference Pattern)

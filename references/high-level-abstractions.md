@@ -827,6 +827,75 @@ export function createStackedTrack(
   });
 }
 
+/**
+ * Updates a StackedTrack's data and triggers a refresh.
+ * Simulates the missing .setData() method for StackedTrack.
+ * 
+ * @param track The StackedTrack instance
+ * @param newData The new data array
+ * @param viewer The LogViewer instance (required for refresh)
+ */
+export async function setStackedTrackData(
+  track: any, 
+  newData: any[], 
+  viewer: any
+): Promise<void> {
+  // Update the data accessor to return the new data
+  track.data = () => Promise.resolve(newData);
+  
+  // Trigger a full refresh of the viewer to re-fetch and re-render
+  if (viewer && typeof viewer.refresh === 'function') {
+    viewer.refresh();
+  }
+}
+
+/**
+ * Unified API to update data for ANY track type.
+ * This abstracts away the difference between GraphTrack (direct data set)
+ * and StackedTrack (Promise-based function).
+ * 
+ * @param track The track instance (GraphTrack, StackedTrack, etc.)
+ * @param data The new data
+ * @param viewer The LogViewer instance
+ */
+export async function updateTrackData(
+  track: any,
+  data: any,
+  viewer: any
+): Promise<void> {
+  if (!track || !viewer) return;
+
+  // 1. Identify track type via heuristics or explicit metadata
+  const isStacked = track.constructor.name === 'StackedTrack' || (typeof track.data === 'function' && !track.plots);
+  const isGraph = track.constructor.name === 'GraphTrack' || Array.isArray(track.plots);
+
+  if (isStacked) {
+    // StackedTrack update logic
+    track.data = () => Promise.resolve(data);
+  } else if (isGraph) {
+    // GraphTrack update logic
+    track.data = data;
+  } else {
+    // Fallback for other track types that might use direct data assignment
+    try {
+      track.data = data;
+    } catch (e) {
+      console.warn(`[wellog-viz] Failed to update data for track ${track.id}. Unknown track type.`);
+    }
+  }
+
+  // 2. Trigger global refresh
+  if (viewer.refresh) {
+    viewer.refresh();
+  }
+}
+
+// Example Usage:
+// await updateTrackData(anyTrack, newData, viewer);
+
+// Example Usage:
+// await setStackedTrackData(myStackedTrack, [ { from: 100, to: 200, name: 'Shale' } ], viewer);
+
 // Example:
 // const track = createStackedTrack('formation', {
 //   data: [ // Just pass the array!
