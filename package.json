@@ -1,0 +1,9 @@
+{
+  "name": "wellog-viz-skill",
+  "version": "1.0.1",
+  "description": "Visualisation components for wellbore log data skill",
+  "private": true,
+  "scripts": {
+    "build": "python scripts/package_skill.py ."
+  }
+}
